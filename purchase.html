@@ -58,6 +58,40 @@ a{color:inherit;text-decoration:none}
   </div>
   <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
 
+  <!-- ▼▼▼ ADDED: Filter for Distributor Purchases vs Actual Sales ▼▼▼ -->
+  <div class="card" style="background:#EAF6FF">
+    <h3>Filter Report</h3>
+    <div class="row" style="align-items:end">
+      <div style="flex:0 0 200px">
+        <label>Type</label>
+        <select id="fType" class="input">
+          <option value="purchases">Distributor Purchases</option>
+          <option value="sales">Actual Sales</option>
+        </select>
+      </div>
+      <div style="flex:0 0 180px">
+        <label>From</label>
+        <input id="fFrom" class="input" type="date">
+      </div>
+      <div style="flex:0 0 180px">
+        <label>To</label>
+        <input id="fTo" class="input" type="date">
+      </div>
+      <div style="flex:0 0 160px">
+        <button class="btn primary" onclick="showFilterReport()">Show Report</button>
+      </div>
+      <div style="flex:0 0 160px">
+        <button class="btn" onclick="exportFilterCSV()">Export CSV</button>
+      </div>
+    </div>
+    <table class="table" id="filterResult" style="margin-top:10px">
+      <thead><tr><th>#</th><th>Date</th><th>ID/Invoice</th><th>Total</th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700">Total</td><td id="fTotal">₹0.00</td></tr></tfoot>
+    </table>
+  </div>
+  <!-- ▲▲▲ /ADDED ▼ nothing else below changed ▲▲▲ -->
+
   <div class="card" style="background:var(--mint)">
     <div class="row">
       <div style="flex:1"><label>Distributor</label><input id="vendor" class="input" placeholder="SRI VENKATASAI AGENCIES"></div>
@@ -178,6 +212,71 @@ function v(id){return document.getElementById(id).value}
 function s(id,val){document.getElementById(id).value=val}
 function q(sel){return document.querySelector(sel)}
 function eqi(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase();}
+
+/* ===== ADDED: Filter logic (reads existing localStorage data) ===== */
+let FILTER_LAST = { type:'', rows:[], from:'', to:'' };
+
+function showFilterReport(){
+  const type = document.getElementById('fType').value;
+  const fromStr = document.getElementById('fFrom').value || '1970-01-01';
+  const toStr   = document.getElementById('fTo').value   || new Date().toISOString().slice(0,10);
+  const from = new Date(fromStr);
+  const to   = new Date(toStr); to.setHours(23,59,59,999);
+
+  let arr=[];
+  if(type==='purchases'){
+    try{arr=JSON.parse(localStorage.getItem('pharma_purchases_json')||'[]')}catch{}
+  } else {
+    try{arr=JSON.parse(localStorage.getItem('pharma_sales_json')||'[]')}catch{}
+  }
+
+  const rows=arr.filter(r=>{
+    const d=new Date(r.date||r.ts||'');
+    return d>=from && d<=to;
+  });
+
+  const tb=document.querySelector('#filterResult tbody'); tb.innerHTML='';
+  let total=0;
+  rows.forEach((r,i)=>{
+    const dt=(r.date? r.date.slice(0,10): new Date(r.ts).toISOString().slice(0,10));
+    const id=r.inv||r.id||'-';
+    const val=Number(r.total||r.amount||0);
+    total+=val;
+    tb.insertAdjacentHTML('beforeend',`<tr><td>${i+1}</td><td>${dt}</td><td>${id}</td><td>₹${val.toFixed(2)}</td></tr>`);
+  });
+  document.getElementById('fTotal').textContent='₹'+total.toFixed(2);
+
+  FILTER_LAST = {
+    type, from: fromStr, to: toStr,
+    rows: rows.map(r=>({
+      date: (r.date? r.date.slice(0,10): new Date(r.ts).toISOString().slice(0,10)),
+      id: r.inv||r.id||'-',
+      total: Number(r.total||r.amount||0)
+    }))
+  };
+}
+
+function exportFilterCSV(){
+  if(!FILTER_LAST.rows.length){
+    alert('Run "Show Report" first.');
+    return;
+  }
+  const lines = ['Date,ID/Invoice,Total'];
+  FILTER_LAST.rows.forEach(r=>{
+    lines.push(`${r.date},${String(r.id).replace(/,/g,' ')},${r.total.toFixed(2)}`);
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  const safeType = FILTER_LAST.type==='purchases' ? 'purchases' : 'sales';
+  const range = `${FILTER_LAST.from}_to_${FILTER_LAST.to}`;
+  a.href = URL.createObjectURL(blob);
+  a.download = `${safeType}_report_${range}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(a.href);
+  a.remove();
+}
+/* ===== /ADDED ===== */
 </script>
 
 <!-- Engines + Wiring -->

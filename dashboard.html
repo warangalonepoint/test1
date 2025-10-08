@@ -17,62 +17,74 @@
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
 .wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+
+/* Header (locked UI) */
 .header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-top:10px;border-radius:12px;background:#DED8F2B3;box-shadow:var(--shadow)}
 .header .logo{height:40px}
-.banner{margin:10px 0;border-radius:16px;overflow:hidden;background:#D6E5DD}
-.banner img{width:100%;transform:scale(.60);transform-origin:center;opacity:.95;mix-blend-mode:multiply}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
+.header .title{font-weight:800;font-size:18px}
+.header .sub{font-size:12px;color:var(--muted)}
 .btn{display:inline-block;background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:8px 14px;font-weight:700;text-decoration:none;color:inherit;text-align:center}
 .btn.primary{background:var(--primary);color:#fff;border:none}
+
+/* Banner (locked UI) */
+.banner{margin:10px 0;border-radius:16px;overflow:hidden;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.60);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+
+/* Cards / Grid */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 6px}
 .kpi{font-weight:800;font-size:22px}
 .small{color:var(--muted);font-size:12px}
+
+/* Pastel pills */
+.pill{
+  display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;line-height:1;margin:2px 4px;
+  border:1px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)
+}
+.pill.mint{background:#C9F1D9;color:#064E3B;border-color:#A7E5C4}
+.pill.lav{background:#E3D9FF;color:#312E81;border-color:#C9B8FF}
+.pill.peach{background:#FFE0C8;color:#7C2D12;border-color:#FFC8A0}
+.pill.teal{background:#B5EFE7;color:#064E3B;border-color:#91E1D4}
+.pill.gray{background:#E2E8F0;color:#1E293B;border-color:#CBD5E1}
+
+/* Footer */
 .footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
 
-/* Filled pastel pills */
-.pill{
-  display:inline-block; padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700; line-height:1;
-  margin:2px 4px; position:relative; z-index:2; border:1px solid transparent; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.04);
-}
-.pill.mint  { background:#C9F1D9 !important; color:#064E3B !important; border-color:#A7E5C4 !important; }
-.pill.lav   { background:#E3D9FF !important; color:#312E81 !important; border-color:#C9B8FF !important; }
-.pill.peach { background:#FFE0C8 !important; color:#7C2D12 !important; border-color:#FFC8A0 !important; }
-.pill.teal  { background:#B5EFE7 !important; color:#064E3B !important; border-color:#91E1D4 !important; }
-.pill.gray  { background:#E2E8F0 !important; color:#1E293B !important; border-color:#CBD5E1 !important; }
-
-/* Toast */
-.toast{
-  position:fixed; right:20px; bottom:20px; background:#17B26A; color:#fff;
-  padding:10px 16px; border-radius:12px; font-weight:800; box-shadow:0 8px 24px rgba(0,0,0,.18);
-  z-index:9999; max-width:78vw;
-}
+/* Toast (new booking ping) */
+.toast{position:fixed;right:20px;bottom:20px;background:#17B26A;color:#fff;padding:10px 16px;border-radius:12px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:9999}
 </style>
 </head>
 <body>
 <div class="wrap">
+
+  <!-- Header -->
   <div class="header">
     <div style="display:flex;align-items:center;gap:10px">
       <img class="logo" src="./assets/logo.png" alt="logo">
       <div>
-        <div style="font-weight:800;font-size:18px">Dashboard</div>
-        <div class="small">Quick access to modules</div>
+        <div class="title" id="clinicTitle">Dashboard</div>
+        <div class="sub" id="docLine">Quick access to modules</div>
       </div>
     </div>
     <a class="btn" href="./settings.html">Settings</a>
   </div>
 
+  <!-- Banner -->
   <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
 
+  <!-- KPI strip -->
   <div class="grid">
     <div class="card" style="background:var(--mint)">
-      <h3>Bookings <span class="pill mint">Live</span></h3>
+      <h3>Bookings <span class="pill mint">Today</span></h3>
       <div class="kpi" id="k_today">0</div>
-      <a class="btn primary" href="./bookings.html">Open</a>
+      <div class="small">New + returning patients</div>
+      <div style="margin-top:8px"><a class="btn primary" href="./bookings.html">Open</a></div>
     </div>
 
     <div class="card" style="background:var(--lav)">
       <h3>OPD <span class="pill lav">Consultation</span></h3>
-      <div style="margin-bottom:8px" class="small">Live sheet & Records</div>
+      <div class="small" style="margin-bottom:8px">Live sheet &amp; records</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a class="btn" href="./opd-live.html">OPD (Live)</a>
         <a class="btn" href="./opd-records.html">OPD Records</a>
@@ -81,11 +93,13 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(-
 
     <div class="card" style="background:var(--peach)">
       <h3>Lab <span class="pill peach">Diagnostics</span></h3>
+      <div class="small" style="margin-bottom:8px">Orders · Worklist · Billing</div>
       <a class="btn" href="./lab.html">Open Lab Hub</a>
     </div>
 
     <div class="card" style="background:var(--teal)">
       <h3>Pharmacy <span class="pill teal">DRUVHI MEDICALS</span></h3>
+      <div class="small" style="margin-bottom:8px">FEFO · Sales · Inventory · Purchases</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a class="btn" href="./pharmacy.html">Hub</a>
         <a class="btn" href="./inventory.html">Inventory</a>
@@ -97,6 +111,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(-
 
     <div class="card">
       <h3>Other <span class="pill gray">System</span></h3>
+      <div class="small" style="margin-bottom:8px">TV · Front Desk · Reports · Tools</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a class="btn" href="./tv.html">TV</a>
         <a class="btn" href="./booking-status.html">Front Desk</a>
@@ -110,81 +125,68 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(-
 </div>
 
 <script>
-(function initKPIs(){
-  (async ()=>{
-    try{
-      const db=new Dexie('clinicdb'); await db.open().catch(()=>{});
-      const names=(db.tables||[]).map(t=>t.name);
-      const today=new Date().toISOString().slice(0,10);
-      let bookings=0;
-      if(names.includes('bookings')) bookings=await db.table('bookings').where('date').equals(today).count();
-      document.getElementById('k_today').textContent=bookings;
-      db.close();
-    }catch(e){ console.warn(e); }
-  })();
+/* Fill header from /config/doctor-config.json (safe if missing) */
+(async function(){
+  try{
+    const r = await fetch('/config/doctor-config.json',{cache:'no-store'});
+    const c = await r.json();
+    const mk = x => [x.doctorName,x.degrees,x.designation,x.regNo].filter(Boolean).join(' · ');
+    document.getElementById('clinicTitle').textContent = c.clinicName || 'Dashboard';
+    const docLine = mk(c);
+    if (docLine) document.getElementById('docLine').textContent = docLine;
+  }catch{}
 })();
 
-/* ===============================
-   Option 1: In-app Notifications
-   =============================== */
+/* Today KPI — bookings count via Dexie (gracefully degrades) */
+(async function initKPIs(){
+  try{
+    const db=new Dexie('clinicdb'); await db.open().catch(()=>{});
+    const today=new Date().toISOString().slice(0,10);
+    let bookings=0;
+    if((db.tables||[]).some(t=>t.name==='bookings')){
+      bookings=await db.table('bookings').where('date').equals(today).count();
+    }
+    const el=document.getElementById('k_today');
+    if(el) el.textContent=bookings;
+    db.close();
+  }catch(e){ /* silent */ }
+})();
+
+/* Lightweight notifier: pops a toast when a new booking lands */
 (function bookingNotifier(){
   const todayISO = ()=>new Date().toISOString().slice(0,10);
   const SEEN_KEY = 'notifier_seen_count_' + todayISO();
-
   let db=null, lastCount = +(localStorage.getItem(SEEN_KEY)||0);
 
   async function openDB(){
     if(db) return db;
     db = new Dexie('clinicdb');
     db.version(1).stores({ bookings:'++id,date,ts,pid,token,patientName' });
-    try{ await db.open(); }catch(e){ console.warn('Dexie open failed', e); }
+    try{ await db.open(); }catch(e){}
     return db;
   }
-
-  function toast(msg){
-    const t=document.createElement('div');
-    t.className='toast';
-    t.textContent=msg;
-    document.body.appendChild(t);
-    setTimeout(()=>t.remove(), 3600);
+  function toast(txt){
+    const t=document.createElement('div'); t.className='toast'; t.textContent=txt;
+    document.body.appendChild(t); setTimeout(()=>t.remove(), 3600);
   }
 
   async function check(){
     try{
-      const d=await openDB();
-      const today=todayISO();
+      const d=await openDB(); const today=todayISO();
       const count=await d.table('bookings').where('date').equals(today).count();
-
-      // Update KPI live
-      const kEl=document.getElementById('k_today');
-      if(kEl) kEl.textContent=count;
-
+      const k=document.getElementById('k_today'); if(k) k.textContent=count;
       if(count>lastCount){
-        // fetch latest booking (by ts desc then id desc as tie-breaker)
-        const rows = await d.table('bookings').where('date').equals(today).toArray();
+        const rows=await d.table('bookings').where('date').equals(today).toArray();
         rows.sort((a,b)=>(b.ts||0)-(a.ts||0) || (b.id||0)-(a.id||0));
-        const latest = rows[0];
-        const msg = `🩺 New Booking: #${latest?.token ?? '—'} · ${latest?.patientName ?? 'Patient'}`;
-        toast(msg);
-
-        lastCount = count;
-        localStorage.setItem(SEEN_KEY, String(lastCount));
-
-        // signal other tabs (optional)
-        try{ window.dispatchEvent(new StorageEvent('storage',{key:'bookings_changed',newValue:String(Date.now())})); }catch{}
+        const latest=rows[0];
+        toast(`🩺 New Booking: #${latest?.token ?? '—'} · ${latest?.patientName ?? 'Patient'}`);
+        lastCount=count; localStorage.setItem(SEEN_KEY,String(lastCount));
       }else{
-        lastCount = count;
-        localStorage.setItem(SEEN_KEY, String(lastCount));
+        lastCount=count; localStorage.setItem(SEEN_KEY,String(lastCount));
       }
-    }catch(e){
-      // silent
-    }
+    }catch{}
   }
-
-  // initial sync
-  check();
-  // periodic
-  setInterval(check, 4000);
+  check(); setInterval(check, 4000);
 })();
 </script>
 </body>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Supervisor Hub · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8; --teal:#C8F1EC; --rose:#FFE8F0; --gold:#FFF7D6;
+  --card:#ffffff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;
+  background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px}
+.header .logo{height:40px}
+.header .title{font-weight:700;font-size:18px}
+.header .sub{font-size:12px;color:var(--muted)}
+.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:12px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:20px}
+.card{border-radius:var(--r);padding:16px;box-shadow:var(--shadow);transition:transform .1s ease}
+.card:hover{transform:translateY(-2px)}
+.card h3{margin:0 0 6px}
+.card p{margin:0;color:var(--muted);font-size:13px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:#64748b;margin:18px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header with Back -->
+  <div class="header">
+    
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div class="title">Supervisor Hub</div>
+        <div class="sub">Authorized Access · Operational Controls</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner">
+    <img src="./assets/banner.png" alt="Clinic Banner">
+  </div>
+
+  <!-- Main Hub Grid -->
+  <div class="grid">
+
+    <div class="card" style="background:var(--mint)">
+      <h3>Bookings</h3>
+      <p>Create & manage patient registrations.</p>
+      <a class="btn primary" href="./bookings.html">Open</a>
+    </div>
+
+    <div class="card" style="background:var(--lav)">
+      <h3>Booking Status</h3>
+      <p>Track live queue and waiting list.</p>
+      <a class="btn primary" href="./booking-status.html">Open</a>
+    </div>
+
+    <div class="card" style="background:var(--peach)">
+      <h3>TV Display</h3>
+      <p>Show real-time tokens for waiting patients.</p>
+      <a class="btn primary" href="./tv.html">Open</a>
+    </div>
+
+    <div class="card" style="background:var(--teal)">
+      <h3>OPD Records</h3>
+      <p>Access doctor consultations & prescriptions.</p>
+      <a class="btn primary" href="./opd-records.html">Open</a>
+    </div>
+
+    <div class="card" style="background:var(--rose)">
+      <h3>Lab Hub</h3>
+      <p>Process lab tests and push results to OPD.</p>
+      <a class="btn primary" href="./lab.html">Open</a>
+    </div>
+
+    <div class="card" style="background:var(--gold)">
+      <h3>Pharmacy</h3>
+      <p>View, bill, and dispense prescriptions.</p>
+      <a class="btn primary" href="./pharmacy.html">Open</a>
+    </div>
+
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+</body>
+</html>

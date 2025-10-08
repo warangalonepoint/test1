@@ -29,6 +29,10 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
 .table th{background:#f1f5f9}
 .badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
 .footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
+
+/* Added banner (locked style) */
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
 </style>
 </head>
 <body>
@@ -43,11 +47,12 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
         </div>
       </div>
       <div class="links">
-        <a class="btn" href="./opd-live.html">OPD (Live)</a>
-        <a class="btn" href="./index.html">Home</a>
-      </div>
+       
     </div>
   </div>
+
+  <!-- Added banner -->
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
 
   <div class="card" style="background:#E8F6ED">
     <div class="row" style="align-items:end">
@@ -172,20 +177,25 @@ $("#btnCSV").onclick=()=>{
   a.href=URL.createObjectURL(blob); a.download="opd-records.csv"; a.click(); URL.revokeObjectURL(a.href);
 };
 
-window.printRec = (r)=>{
-  const w=window.open("","_blank");
-  w.document.write(`<html><head><title>OPD Record</title></head><body style="font:14px system-ui;padding:12mm">
-  <h2 style="margin:0 0 6px">OPD Record</h2>
-  <div><b>Date:</b> ${new Date(r.ts).toLocaleString()}</div>
-  <div><b>PID:</b> ${r.pid} &nbsp; <b>Name:</b> ${r.name||""} &nbsp; <b>Phone:</b> ${r.phone||""}</div>
-  <hr/>
-  <div><b>Complaints:</b> ${r.complaints||""}</div>
-  <div><b>Diagnosis:</b> ${r.diagnosis||""}</div>
-  <div><b>Vitals:</b> H ${r.height||"-"} cm · W ${r.weight||"-"} kg · Temp ${r.temp||"-"}°C · BMI ${ (function(h,w){h=+h||0;w=+w||0;const m=h?h/100:0;const v=(m>0&&w>0)?(w/(m*m)):0;return v?v.toFixed(2):"-";})(r.height,r.weight)}</div>
-  <div><b>Next Visit:</b> ${r.nextVisit||"-"}</div>
-  <div style="margin-top:12px;text-align:center;font-size:12px;color:#555">Powered by Onestop AI Services</div>
-  </body></html>`);
-  w.document.close(); w.print();
+/* UPDATED: robust print linker that works if print-opd.html is in the same folder OR in /print/ */
+window.printRec = async (r)=>{
+  const qs = '?data=' + encodeURIComponent(JSON.stringify(r)) + '&print=1';
+  const paths = ['./print-opd.html', './print/print-opd.html'];
+  let target = null;
+
+  for (const p of paths) {
+    try {
+      const resp = await fetch(p, { method: 'HEAD', cache: 'no-store' });
+      if (resp.ok) { target = p; break; }
+    } catch(_) { /* ignore and try next */ }
+  }
+
+  if (!target) {
+    alert('print-opd.html not found.\nPlace it next to opd-records.html or in ./print/ folder.');
+    return;
+  }
+
+  window.open(target + qs, '_blank');
 };
 
 (async function init(){ await loadAll(); render(); })();

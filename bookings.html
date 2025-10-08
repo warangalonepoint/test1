@@ -71,7 +71,7 @@ h3{margin:8px 0}
         </div>
       </div>
     </div>
-    <a class="btn" href="./index.html">Home</a>
+    <a class="btn" href="./frontoffice.html">← Back</a>
   </div>
 
   <!-- Banner -->
@@ -128,6 +128,15 @@ h3{margin:8px 0}
         <div style="flex:1 1 160px"><label>City</label><input id="city" class="input" placeholder="Warangal"></div>
         <div style="flex:0 0 120px"><label>PIN</label><input id="pin" class="input" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"></div>
       </div>
+
+      <!-- ▼▼ Added: Fees (read-only, default ₹300) just BEFORE payment options ▼▼ -->
+      <div class="row">
+        <div style="flex:0 0 180px">
+          <label>Fees</label>
+          <input id="fees" class="input" value="₹ 300" readonly>
+        </div>
+      </div>
+      <!-- ▲▲ Added block ends here — no other code changed ▲▲ -->
 
       <div class="row">
         <div style="flex:0 0 180px"><label>Payment Mode *</label>

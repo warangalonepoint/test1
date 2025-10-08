@@ -267,8 +267,7 @@ textarea{min-height:90px;resize:vertical}
   <div class="card">
     <div class="right">
       <button class="btn" id="btnPrint">Print OPD</button>
-      <button class="btn primary" id="btnSave">Save OPD</button>
-    </div>
+         </div>
   </div>
 
   <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
@@ -565,10 +564,44 @@ document.addEventListener('DOMContentLoaded', ()=>{
     fillFromRecord(booking, patient); _savedOnce=false; _savedRecordId=null; msg('Loaded');
   });
 
-  // Save & Print
-  $('#btnSave').addEventListener('click', async ()=>{ try{ await saveOPD(); }catch{} });
-  $('#btnPrint').addEventListener('click', ()=>printOPD());
+ // Print -> open ./print/print-opd.html (no save)
+$('#btnPrint').addEventListener('click', ()=>{
+  const pid = $('#pid').value.trim();
+  if(!pid){ msg('No PID selected', false); return; }
 
+  const payload = {
+    pid,
+    name: $('#name').value,
+    phone: $('#phone').value,
+    age: $('#age').value,
+    gender: $('#gender').value,
+    reason: $('#reason').value,
+    vitals: {
+      height: $('#height').value,
+      weight: $('#weight').value,
+      temp: $('#temp').value,
+      pulse: $('#pulse').value,
+      spo2: $('#spo2').value,
+      bmi: $('#bmi').textContent,
+      bsa: $('#bsa').textContent
+    },
+    notes: {
+      cc: $('#cc').value,
+      exam: $('#exam').value,
+      dx: $('#dx').value,
+      plan: $('#plan').value
+    },
+    rx: RX.slice(),
+    labs: LABS.slice(),
+    nextVisit: $('#nextVisit').value
+  };
+
+  try{
+    localStorage.setItem('opd_print_payload', JSON.stringify(payload));
+  }catch(e){ console.warn('Could not persist print payload', e); }
+
+  window.open('./print/print-opd.html?pid='+encodeURIComponent(pid), '_blank');
+});
   // vitals compute
   wireVitals();
 

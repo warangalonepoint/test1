@@ -9,6 +9,7 @@
 :root{
   --ink:#0f172a; --muted:#475569; --line:#e5e7eb; --bg:#ffffff; --accent:#E86D2D;
 }
+
 *{box-sizing:border-box}
 html,body{background:#f3f6fb;color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
 .wrap{max-width:1000px;margin:0 auto;padding:12px}
@@ -89,21 +90,14 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
           </div>
           <button class="btn" id="btnLoadPID">Load by PID</button>
         </div>
+        <button class="btn" id="btnPrint">🖨️ Print</button>
       </div>
     </div>
     <hr class="sep">
     <div class="row">
-      <div style="flex:2 1 480px">
-        <label class="label">Or paste OPD JSON</label>
+      <div style="flex:1 1 100%">
+        <label class="label">Paste OPD JSON (optional)</label>
         <textarea id="paste" class="input" style="min-height:140px" placeholder='{"pid":"P0001","name":"..."}'></textarea>
-      </div>
-      <div style="flex:1 1 300px">
-        <label class="label">Doctor Config (saved in browser)</label>
-        <textarea id="cfg" class="input" style="min-height:140px"></textarea>
-        <div class="row" style="margin-top:6px">
-          <button class="btn" id="btnApplyCfg">Save Config</button>
-          <button class="btn" id="btnDefaults">Reset Defaults</button>
-        </div>
       </div>
     </div>
     <div id="msg" style="margin-top:6px;color:#065f46;display:none"></div>
@@ -187,7 +181,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
 <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
 <script>
-/* ---------- Config ---------- */
+/* ---------- Config (hidden, still applied) ---------- */
 const CFG_KEY='doctor_config_json';
 const defaults={
   clinic:"DR. CHARAN CHILD CLINIC",
@@ -206,7 +200,6 @@ const defaults={
 const $=s=>document.querySelector(s);
 function toast(t){const m=$("#msg");m.textContent=t;m.style.display='block';setTimeout(()=>m.style.display='none',1500);}
 function loadCfg(){try{return {...defaults,...(JSON.parse(localStorage.getItem(CFG_KEY)||'{}'))};}catch{return {...defaults};}}
-function saveCfg(c){localStorage.setItem(CFG_KEY,JSON.stringify(c));toast('Config saved');}
 function applyWatermark(url){document.getElementById('wmStyle').textContent=`.sheet::before{background-image:url("${url}")}`;}
 function applyCfg(c){
   $('#cfg_telugu').textContent=c.telugu_line;
@@ -220,7 +213,6 @@ function applyCfg(c){
   $('#cfg_appoint').textContent="For Appointment: "+c.appointment;
   $('#sig_dname').textContent=c.doctor_name;
   $('#v_doc').textContent=c.doctor_name;
-  $('#cfg').value=JSON.stringify(c,null,2);
   applyWatermark(c.logo||defaults.logo);
 }
 
@@ -284,7 +276,6 @@ function renderOPD(rec){
 /* ---------- Loaders ---------- */
 async function loadAuto(){
   try{
-    // Staged payload from OPD
     const staged=JSON.parse(localStorage.getItem('opd_print_payload')||'null');
     if(staged){ renderOPD(staged); return; }
   }catch{}
@@ -328,12 +319,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   $('#btnLoadAuto').onclick=loadAuto;
   $('#btnLoadPID').onclick=loadByPID;
   $('#paste').addEventListener('change',pasteJSON);
-
-  $('#btnApplyCfg').onclick=()=>{
-    try{ const c=JSON.parse($('#cfg').value||'{}'); saveCfg(c); applyCfg(loadCfg()); }
-    catch{ toast('Invalid config JSON'); }
-  };
-  $('#btnDefaults').onclick=()=>{ saveCfg(defaults); applyCfg(loadCfg()); };
+  $('#btnPrint').onclick=()=>window.print();
 });
 </script>
 </body>

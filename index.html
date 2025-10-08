@@ -3,234 +3,116 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Clinic PWA · Home</title>
+<title>Clinic Home · PWA</title>
 <link rel="manifest" href="./manifest.json"/>
 <link rel="stylesheet" href="./styles.css"/>
-<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
 <style>
 :root{
-  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
-  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8; --teal:#C8F1EC;
+  --bg:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
   --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
   --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
-  --ring:0 10px 28px rgba(17,24,39,.12);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8;
 }
+
+/* Base */
 *{box-sizing:border-box}
-body{margin:0;font:14px/1.45 system-ui, -apple-system, Segoe UI;background:var(--bg-gradient);color:var(--ink)}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min-height:100vh}
 .wrap{max-width:1100px;margin:0 auto;padding:0 10px}
 
-/* v8.1 header */
-.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-top:10px;border-radius:12px;background:#DED8F2B3;box-shadow:var(--shadow)}
+/* Header (locked style) */
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px}
 .header .logo{height:40px}
-.btn{display:inline-block;background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:8px 14px;font-weight:700;text-decoration:none;color:inherit;text-align:center}
+.header .title{font-weight:800;font-size:18px}
+.header .sub{font-size:12px;color:var(--muted)}
+
+/* Banner (locked style) */
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+
+/* Cards / Grid */
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tile{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column}
+.tile h3{margin:0 0 6px}
+.tile .desc{color:var(--muted);font-size:13px;margin-bottom:10px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:8px 14px;font-weight:700;cursor:pointer;text-align:center}
 .btn.primary{background:var(--primary);color:#fff;border:none}
+.row{display:flex;gap:8px;flex-wrap:wrap}
 
-/* v8.1 banner */
-.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD;box-shadow:var(--shadow)}
-.banner img{width:100%;transform:scale(.60);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
-
-/* KPI strip */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:4px}
-.kpi{
-  background:var(--card); border-radius:14px; padding:12px; box-shadow:var(--shadow); border:1px solid #0001;
-}
-.kpi h4{margin:0 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-.kpi .v{font-weight:900;font-size:24px}
-
-/* module grid */
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:12px}
-.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);border:1px solid #0001}
-.card h3{margin-top:0}
-
-/* filled pastel pills */
-.pill{
-  display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;line-height:1;margin:2px 4px;
-  border:1px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.04)
-}
-.pill.mint  { background:#C9F1D9 !important; color:#064E3B !important; border-color:#A7E5C4 !important; }
-.pill.lav   { background:#E3D9FF !important; color:#312E81 !important; border-color:#C9B8FF !important; }
-.pill.peach { background:#FFE0C8 !important; color:#7C2D12 !important; border-color:#FFC8A0 !important; }
-.pill.teal  { background:#B5EFE7 !important; color:#064E3B !important; border-color:#91E1D4 !important; }
-.pill.gray  { background:#E2E8F0 !important; color:#1E293B !important; border-color:#CBD5E1 !important; }
-
-.small{color:var(--muted);font-size:12px}
-.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
-
-/* quick actions */
-.quick{display:flex;flex-wrap:wrap;gap:8px}
-.searchbar{display:flex;gap:8px;align-items:end;margin-top:10px}
-.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+/* Footer */
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:#64748b;margin:18px 0}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- Header -->
+  <!-- Header (filled from config) -->
   <div class="header">
     <div style="display:flex;align-items:center;gap:10px">
       <img class="logo" src="./assets/logo.png" alt="logo">
       <div>
-        <div style="font-weight:800;font-size:18px">Clinic Home</div>
-        <div class="small">Welcome back — quick access & KPIs</div>
+        <div class="title" id="clinicName">Clinic Home</div>
+        <div class="sub" id="docLine">—</div>
       </div>
     </div>
-    <a class="btn" href="./settings.html">Settings</a>
+    <div class="sub" id="addrLine"></div>
   </div>
 
-  <!-- Banner v8.1 -->
+  <!-- Banner -->
   <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
 
-  <!-- KPIs -->
-  <div class="kpis">
-    <div class="kpi" style="background:var(--mint)">
-      <h4>Bookings Today</h4>
-      <div class="v" id="k_book">0</div>
-      <div class="small">Front desk · <a class="pill mint" href="./bookings.html">Book</a></div>
-    </div>
-    <div class="kpi" style="background:var(--lav)">
-      <h4>OPD Saved Today</h4>
-      <div class="v" id="k_opd">0</div>
-      <div class="small">Consultation · <a class="pill lav" href="./opd-records.html">Records</a></div>
-    </div>
-    <div class="kpi" style="background:var(--peach)">
-      <h4>Pending Lab Orders</h4>
-      <div class="v" id="k_lab">0</div>
-      <div class="small">Diagnostics · <a class="pill peach" href="./lab.html">Lab Hub</a></div>
-    </div>
-    <div class="kpi" style="background:var(--teal)">
-      <h4>Sales Today</h4>
-      <div class="v" id="k_sales">0</div>
-      <div class="small">Pharmacy · <a class="pill teal" href="./sales.html">POS</a></div>
-    </div>
-  </div>
-
-  <!-- Quick Jump -->
-  <div class="card" style="margin-top:12px">
-    <h3 style="margin:0 0 6px">Quick Actions</h3>
-    <div class="quick">
-      <a class="btn primary" href="./opd-live.html">Open OPD (Live)</a>
-      <a class="btn" href="./booking-status.html">Booking Status</a>
-      <a class="btn" href="./tv.html">TV Screen</a>
-      <a class="btn" href="./inventory.html">Inventory</a>
-      <a class="btn" href="./reports.html">Reports</a>
-    </div>
-    <div class="searchbar">
-      <div style="flex:1">
-        <label class="small">Find Patient by PID</label>
-        <input id="pidQuick" class="input" placeholder="P00042">
+  <!-- Hub tiles -->
+  <div class="card" style="background:var(--mint)">
+    <h3 style="margin:0 0 8px">Choose a workspace</h3>
+    <div class="grid3">
+      <!-- Dashboard -->
+      <div class="tile">
+        <h3>Dashboard</h3>
+        <div class="desc">KPIs · Collections · Lab income · Pharmacy sales · OPD insights</div>
+        <div class="row">
+          <a class="btn primary" href="./dashboard.html">Open Dashboard</a>
+        </div>
       </div>
-      <a id="pidGo" class="btn" href="./opd-live.html">Go to OPD</a>
-    </div>
-  </div>
 
-  <!-- Modules -->
-  <div class="grid">
-    <div class="card" style="background:var(--mint)">
-      <h3>Bookings <span class="pill mint">Live</span></h3>
-      <div style="margin-bottom:8px" class="small">Create & manage appointments</div>
-      <a class="btn primary" href="./bookings.html">Open</a>
-    </div>
-
-    <div class="card" style="background:var(--lav)">
-      <h3>OPD <span class="pill lav">Consultation</span></h3>
-      <div style="margin-bottom:8px" class="small">Live sheet & records</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a class="btn" href="./opd-live.html">OPD (Live)</a>
-        <a class="btn" href="./opd-records.html">OPD Records</a>
+      <!-- Supervisor Hub -->
+      <div class="tile">
+        <h3>Supervisor Hub</h3>
+        <div class="desc">Access to Bookings, Booking Status (TV feed), OPD Records, Lab Hub & Pharmacy</div>
+        <div class="row">
+          <a class="btn primary" href="./supervisor-hub.html">Open Supervisor Hub</a>
+        </div>
       </div>
-    </div>
 
-    <div class="card" style="background:var(--peach)">
-      <h3>Lab <span class="pill peach">Diagnostics</span></h3>
-      <a class="btn" href="./lab.html">Open Lab Hub</a>
-    </div>
-
-    <div class="card" style="background:var(--teal)">
-      <h3>Pharmacy <span class="pill teal">DRUVHI MEDICALS</span></h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a class="btn" href="./pharmacy.html">Hub</a>
-        <a class="btn" href="./inventory.html">Inventory</a>
-        <a class="btn" href="./sales.html">Sales</a>
-        <a class="btn" href="./purchase.html">Purchases</a>
-        <a class="btn" href="./returns.html">Returns</a>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Other <span class="pill gray">System</span></h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a class="btn" href="./tv.html">TV</a>
-        <a class="btn" href="./booking-status.html">Front Desk</a>
-        <a class="btn" href="./reports.html">Reports</a>
-        <a class="btn" href="./test.html">Test Console</a>
+      <!-- Front Office -->
+      <div class="tile">
+        <h3>Front Office</h3>
+        <div class="desc">Bookings · Status updates · TV display control</div>
+        <div class="row">
+          <a class="btn primary" href="./frontoffice.html">Open Front Office</a>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong></div>
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
 </div>
 
 <script>
-const $=s=>document.querySelector(s);
-
-/* Quick PID jump */
-$('#pidGo').addEventListener('click', e=>{
-  const pid=($('#pidQuick').value||'').trim();
-  if(pid){
-    e.currentTarget.href = './opd-live.html?pid='+encodeURIComponent(pid.toUpperCase());
-  }else{
-    e.currentTarget.href = './opd-live.html';
-  }
-});
-
-/* KPIs: read Dexie + localStorage */
-(async function kpis(){
-  let db=null;
+/* Full config: read /config/doctor-config.json and populate header lines */
+(async function(){
   try{
-    db=new Dexie('clinicdb');
-    // be lenient: create if not present
-    db.version(1).stores({
-      bookings:'++id,date,ts,pid,token,status,patientName,contact',
-      opd:'++id,ts,pid,date'
-    });
-    await db.open().catch(()=>{});
-  }catch(e){}
+    const r = await fetch('/config/doctor-config.json', {cache:'no-store'});
+    const c = await r.json();
+    const mkLine = x => [x.doctorName,x.degrees,x.designation,x.regNo].filter(Boolean).join(' · ');
+    const addr = [c.clinicName?null:c.addressLine1, c.phone, c.timings].filter(Boolean).join(' · ');
 
-  async function refreshKPIs(){
-    const today=new Date().toISOString().slice(0,10);
-    let bookings=0, opd=0, lab=0, sales=0;
-
-    try{
-      if(db && db.tables.map(t=>t.name).includes('bookings')){
-        bookings = await db.table('bookings').where('date').equals(today).count();
-      }
-    }catch{}
-
-    try{
-      if(db && db.tables.map(t=>t.name).includes('opd')){
-        const list = await db.table('opd').where('date').equals(today).toArray();
-        opd = list.length;
-      }
-    }catch{}
-
-    try{
-      const q = JSON.parse(localStorage.getItem('lab_orders_queue')||'[]');
-      lab = Array.isArray(q) ? q.length : 0;
-    }catch{}
-
-    try{
-      const n = +localStorage.getItem('pharma_sales_today')||0;
-      sales = n;
-    }catch{}
-
-    $('#k_book').textContent = bookings;
-    $('#k_opd').textContent  = opd;
-    $('#k_lab').textContent  = lab;
-    $('#k_sales').textContent= sales;
+    document.getElementById('clinicName').textContent = c.clinicName || 'Clinic Home';
+    document.getElementById('docLine').textContent = mkLine(c) || '—';
+    document.getElementById('addrLine').textContent = addr || '';
+  }catch(e){
+    // silent fallback
   }
-
-  await refreshKPIs();
-  setInterval(refreshKPIs, 10000);
 })();
 </script>
 </body>
