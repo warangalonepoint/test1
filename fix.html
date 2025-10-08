@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Clinic PWA · Auto Diagnostics & Fix</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="./scripts/db.js"></script>
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8; --teal:#C8F1EC;
+  --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:10px}
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px}
+.header .logo{height:40px}
+.banner{overflow:hidden;border-radius:var(--r);margin:10px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);display:block;opacity:.95;mix-blend-mode:multiply}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.btn.warn{background:#111827;color:#fff;border-color:#111827}
+.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.log{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#0b1020;color:#E6EDF3;border-radius:12px;padding:10px;min-height:220px;white-space:pre-wrap}
+.badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:11px}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
+.k{font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div style="font-weight:700;font-size:18px">Auto Diagnostics & Fix</div>
+        <div style="font-size:13px;color:var(--muted)">DB health · Seeding · Repair · One-click Fix</div>
+      </div>
+    </div>
+    <div class="row">
+      <a class="btn" href="./index.html">Home</a>
+    </div>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <!-- Controls -->
+  <div class="card" style="background:var(--mint)">
+    <div class="row">
+      <button class="btn" id="btnCheck">Run Diagnostics</button>
+      <button class="btn" id="btnRepair">Repair DB</button>
+      <button class="btn" id="btnSeed">Seed Demo Data</button>
+      <button class="btn primary" id="btnOneFix">One-click Fix</button>
+      <button class="btn" id="btnExport">Export Report JSON</button>
+      <button class="btn warn" id="btnWipe">Wipe Local (careful)</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="badge">patients/bookings/opd → IndexedDB</div>
+      <div class="badge">pharma_* & lab_* → localStorage</div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="card" style="background:var(--lav)">
+    <h3>Status</h3>
+    <div id="status" class="row" style="gap:16px">
+      <div class="badge">DB: <span id="st_db">—</span></div>
+      <div class="badge">Patients: <span id="st_pat">—</span></div>
+      <div class="badge">Bookings (today): <span id="st_bk">—</span></div>
+      <div class="badge">OPD: <span id="st_opd">—</span></div>
+      <div class="badge">Stock items: <span id="st_stock">—</span></div>
+      <div class="badge">Sales: <span id="st_sales">—</span></div>
+      <div class="badge">Purchases: <span id="st_pur">—</span></div>
+      <div class="badge">Returns: <span id="st_ret">—</span></div>
+      <div class="badge">Lab tests cfg: <span id="st_labcfg">—</span></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card" style="background:var(--peach)">
+    <h3>Log</h3>
+    <div id="log" class="log">ready.</div>
+  </div>
+
+  <!-- Quick launch -->
+  <div class="card" style="background:var(--teal)">
+    <h3>Quick Launch</h3>
+    <div class="row">
+      <a class="btn" href="./bookings.html">Open Bookings</a>
+      <a class="btn" href="./opd-live.html">Open OPD Live</a>
+      <a class="btn" href="./sales.html">Open Pharmacy POS</a>
+      <a class="btn" href="./purchase.html">Open Purchases</a>
+      <a class="btn" href="./returns.html">Open Returns</a>
+      <a class="btn" href="./lab.html">Open Lab Hub</a>
+      <a class="btn" href="./test.html">Open Test Suite</a>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+/* ===== utilities ===== */
+const $ = s => document.querySelector(s);
+const log = (...a)=>{ const el=$("#log"); el.textContent += "\\n" + a.join(' '); el.scrollTop = el.scrollHeight; };
+const todayISO = () => new Date().toISOString().slice(0,10);
+function setStat(id, v){ const el=document.getElementById(id); if(el) el.textContent = v; }
+function lsGet(k){ try{return JSON.parse(localStorage.getItem(k)||'[]');}catch{return [];} }
+function lsSet(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+/* ===== DB open (Dexie) ===== */
+async function openDB(){
+  try{
+    const db = new Dexie('clinicdb');
+    // keep stores minimal & app-compatible
+    db.version(1).stores({
+      patients:'pid,patientName,contact,dob',
+      bookings:'++id,date,ts,pid,token,status',
+      opd:'++id,ts,pid,date'
+    });
+    await db.open();
+    return db;
+  }catch(e){
+    log('DB open failed:', e.message||e);
+    return null;
+  }
+}
+
+/* ===== diagnostics ===== */
+async function runDiagnostics(){
+  log('--- diagnostics start ---');
+  const db = await openDB();
+  setStat('st_db', db? 'OK':'ERROR');
+  if(db){
+    const pat = await db.table('patients').count();
+    const bkToday = await db.table('bookings').where('date').equals(todayISO()).count();
+    const opd = await db.table('opd').count();
+    setStat('st_pat', pat); setStat('st_bk', bkToday); setStat('st_opd', opd);
+    log('indexedDB → patients:', pat, ' bookings(today):', bkToday, ' opd:', opd);
+    db.close();
+  }
+
+  const stock = lsGet('pharma_stock_json').length;
+  const sales = lsGet('pharma_sales_json').length;
+  const pur = lsGet('pharma_purchases_json').length;
+  const ret = lsGet('pharma_returns_json').length;
+  const labcfg = Array.isArray(JSON.parse(localStorage.getItem('lab_tests_json')||'[]')) ? JSON.parse(localStorage.getItem('lab_tests_json')||'[]').length : 0;
+
+  setStat('st_stock', stock);
+  setStat('st_sales', sales);
+  setStat('st_pur', pur);
+  setStat('st_ret', ret);
+  setStat('st_labcfg', labcfg);
+  log('localStorage → stock:', stock, ' sales:', sales, ' purchases:', pur, ' returns:', ret, ' lab_cfg:', labcfg);
+  log('--- diagnostics end ---');
+}
+
+/* ===== repair (idempotent) ===== */
+async function repairDB(){
+  log('--- repair start ---');
+  // ensure DB openable (creates stores if missing)
+  const db = await openDB();
+  if(!db){ log('repair: DB not available.'); return; }
+  // ensure basic patient index by pid exists (Dexie v1 already handles)
+  // noop but keeps flow explicit
+  await db.close();
+  log('repair: DB stores ensured.');
+
+  // ensure lab_tests_json present (used by OPD)
+  if(!localStorage.getItem('lab_tests_json')){
+    localStorage.setItem('lab_tests_json', JSON.stringify([
+      {name:'CBP', price:300},{name:'CRP', price:400},{name:'CUE', price:150},
+      {name:'RBS', price:50},{name:'TSB', price:300},{name:'DENGUE IgM IgG', price:800}
+    ]));
+    log('repair: lab_tests_json seeded.');
+  }
+
+  // ensure seed-and-diagnostics flag if you use it elsewhere
+  localStorage.setItem('clinic_diag_enabled','1');
+  log('repair: diagnostics flag on.');
+
+  log('--- repair done ---');
+}
+
+/* ===== seed demo data (safe & minimal) ===== */
+async function seedDemo(){
+  log('--- seeding start ---');
+  const db = await openDB(); if(!db){ log('seed: DB not available.'); return; }
+
+  // Patients
+  const patCnt = await db.table('patients').count();
+  if(patCnt===0){
+    await db.table('patients').bulkAdd([
+      {pid:'P00001',patientName:'Demo Kid',contact:'9000000001',dob:'2019-01-05',gender:'Male',address:'Saraswathi Nagar',city:'Hanamkonda',pin:'506001',height:110,weight:18,temp:38},
+      {pid:'P00002',patientName:'Anitha',contact:'9000000002',dob:'1992-05-10',gender:'Female',address:'Subedari',city:'Hanamkonda',pin:'506002'}
+    ]);
+    log('seed: patients added 2');
+  }else{
+    log('seed: patients already present:', patCnt);
+  }
+
+  // Bookings (today)
+  const today = todayISO();
+  const haveToday = await db.table('bookings').where('date').equals(today).count();
+  if(!haveToday){
+    await db.table('bookings').bulkAdd([
+      {date:today, ts:Date.now()-300000, pid:'P00001', token:1, channel:'Walk', patientName:'Demo Kid', contact:'9000000001', gender:'Male', age:'5y 2m', reason:'Fever', status:'queued'},
+      {date:today, ts:Date.now()-120000, pid:'P00002', token:2, channel:'WhatsApp', patientName:'Anitha', contact:'9000000002', gender:'Female', age:'32y', reason:'Headache', status:'queued'}
+    ]);
+    log('seed: bookings today added 2');
+  }else{
+    log('seed: bookings present today:', haveToday);
+  }
+
+  // OPD sample
+  const opdCnt = await db.table('opd').count();
+  if(opdCnt===0){
+    await db.table('opd').add({
+      ts:Date.now()-60000, date:today, pid:'P00001', name:'Demo Kid', phone:'9000000001',
+      age:'5y 2m', gender:'Male', reason:'Fever',
+      vitals:{height:110,weight:18,temp:38,pulse:98,spo2:98,bmi:'14.9',bsa:'0.75'},
+      notes:{cc:'Fever x 2 days',exam:'Febrile, throat injected',dx:'Viral fever',plan:'Hydration, paracetamol'},
+      rx:[{name:'Paracetamol Syp',dose:'5 ml',freq:'TID',days:3,qty:1}],
+      labs:[{test:'CBP',price:300,note:'—'}]
+    });
+    log('seed: opd added 1');
+  }else{
+    log('seed: opd present:', opdCnt);
+  }
+  await db.close();
+
+  // Inventory (localStorage)
+  if(!lsGet('pharma_stock_json').length){
+    lsSet('pharma_stock_json', [
+      {name:"Paracetamol Syp", pack:"60ml", batch:"PA-01", exp:"12/26", qty:8, mrp:55, rate:45, barcode:"Paracetamol Syp|PA-01"},
+      {name:"Cetirizine Tab", pack:"10x10", batch:"CE-11", exp:"11/26", qty:30, mrp:22, rate:18, barcode:"Cetirizine Tab|CE-11"},
+      {name:"Azithromycin 250", pack:"6 tab", batch:"AZ-07", exp:"10/26", qty:18, mrp:78, rate:62, barcode:"Azithromycin 250|AZ-07"}
+    ]);
+    log('seed: stock added 3');
+  }else{
+    log('seed: stock already present:', lsGet('pharma_stock_json').length);
+  }
+
+  // Sales/Purchase/Returns/Lab queues
+  if(!localStorage.getItem('pharma_sales_json')) lsSet('pharma_sales_json', []);
+  if(!localStorage.getItem('pharma_purchases_json')) lsSet('pharma_purchases_json', []);
+  if(!localStorage.getItem('pharma_returns_json')) lsSet('pharma_returns_json', []);
+  if(!localStorage.getItem('pharma_rx_queue')) lsSet('pharma_rx_queue', []);
+  if(!localStorage.getItem('lab_orders_queue')) lsSet('lab_orders_queue', []);
+
+  // Lab master list
+  if(!localStorage.getItem('lab_tests_json')){
+    localStorage.setItem('lab_tests_json', JSON.stringify([
+      {name:'CBP',price:300},{name:'CRP',price:400},{name:'CUE',price:150},
+      {name:'RBS',price:50},{name:'TSB',price:300},{name:'DENGUE IgM IgG',price:800}
+    ]));
+    log('seed: lab_tests_json set');
+  }
+
+  log('--- seeding done ---');
+}
+
+/* ===== one-click fix ===== */
+async function oneClickFix(){
+  await runDiagnostics();
+  await repairDB();
+  await seedDemo();
+  await runDiagnostics();
+}
+
+/* ===== export report ===== */
+function exportReport(){
+  const report = {
+    time: new Date().toISOString(),
+    db: $('#st_db').textContent,
+    stats: {
+      patients: $('#st_pat').textContent,
+      bookings_today: $('#st_bk').textContent,
+      opd: $('#st_opd').textContent,
+      stock: $('#st_stock').textContent,
+      sales: $('#st_sales').textContent,
+      purchases: $('#st_pur').textContent,
+      returns: $('#st_ret').textContent,
+      lab_cfg: $('#st_labcfg').textContent
+    }
+  };
+  const blob = new Blob([JSON.stringify(report,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'clinic-diagnostics.json';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ===== wipe local ===== */
+async function wipeAll(){
+  if(!confirm('This will erase all local data for this app (IndexedDB + localStorage). Continue?')) return;
+  try{ await Dexie.delete('clinicdb'); }catch{}
+  localStorage.clear();
+  log('wipe: done. Reloading…'); setTimeout(()=>location.reload(), 600);
+}
+
+/* ===== wire UI ===== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  $('#btnCheck').addEventListener('click', runDiagnostics);
+  $('#btnRepair').addEventListener('click', repairDB);
+  $('#btnSeed').addEventListener('click', seedDemo);
+  $('#btnOneFix').addEventListener('click', oneClickFix);
+  $('#btnExport').addEventListener('click', exportReport);
+  $('#btnWipe').addEventListener('click', wipeAll);
+
+  // auto run once
+  runDiagnostics();
+});
+</script>
+
+<!-- keep engines consistent with app (optional; some pages rely on these being present globally) -->
+<script src="/scripts/qrcode.min.js?v=1.1"></script>
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<script src="/scripts/app-wiring.js?v=1.1"></script>
+<script src="/scripts/seed-and-diagnostics.js?v=1.2"></script>
+</body>
+</html>

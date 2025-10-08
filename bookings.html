@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bookings · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<!-- Dexie + DB -->
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="./scripts/db.js"></script>
+<!-- Local QR -->
+<script src="./scripts/qrcode.min.js"></script>
+
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8;
+  --card:#ffffff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);min-height:100vh}
+h3{margin:8px 0}
+.card{border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px;background:var(--card)}
+.input,.btn,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.btn{background:#fff;cursor:pointer;transition:.2s;font-weight:600;border-radius:20px;font-size:13px;padding:6px 14px}
+.btn:hover{background:#f1f5f9}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.btn.primary:hover{opacity:.9}
+.alert{margin-top:8px;padding:8px 10px;border-radius:8px;background:#fee2e2;color:#b91c1c;display:none}
+.alert.ok{background:#dcfce7;color:#065f46}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px;}
+.header .logo{height:40px}
+.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:#D6E5DD;}
+.banner img{width:100%;transform:scale(0.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:#64748b;margin-top:18px}
+
+/* Print slip (still supported inline) */
+@media print{
+  body{background:#fff;color:#000}
+  .wrap,.header,.banner,.card,.footer{display:none!important}
+  #printArea{display:block;padding:6mm}
+  .sheet{height:210mm;width:148mm;display:flex;flex-direction:column;justify-content:space-between}
+  .slip{height:48%;width:100%;border:1px dashed #999;padding:8mm;margin-bottom:6mm;font:13px/1.4 system-ui;box-sizing:border-box}
+  .slip h3{text-align:center;margin:0 0 6px;font-size:16px;font-weight:800}
+  .prow{display:flex;justify-content:space-between;gap:12px;margin-top:6px;flex-wrap:wrap}
+  .qrwrap{display:flex;align-items:center;gap:8px}
+  .foot{text-align:center;font-size:12px;margin-top:8px;border-top:1px solid #ccc;padding-top:6px}
+}
+#printArea{display:none}
+.qr-mini{width:44px;height:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header (doctor lines filled from config) -->
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div class="title" id="clinicTitle" style="font-weight:700;font-size:18px">Bookings</div>
+        <div class="subtitle" id="docSubtitle" style="font-size:13px;color:var(--muted)">
+          New & Returning Patients · Auto PID · Token · Print QR Slip
+        </div>
+      </div>
+    </div>
+    <a class="btn" href="./index.html">Home</a>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner">
+    <img src="./assets/banner.png" alt="Clinic Banner">
+  </div>
+
+  <!-- Search by PID -->
+  <div class="card" style="background:var(--mint)">
+    <div class="row" style="align-items:end">
+      <div style="flex:1 1 260px">
+        <label>Search by PID (returning patient)</label>
+        <input id="pidSearch" class="input" placeholder="e.g., P00042">
+      </div>
+      <div style="flex:0 0 180px"><button class="btn" id="btnSearchPID">Search & Prefill</button></div>
+      <div style="flex:0 0 120px"><button class="btn" id="btnClear">Clear</button></div>
+      <div class="muted" style="margin-left:auto">Use PID from previous slip QR.</div>
+    </div>
+  </div>
+
+  <!-- Booking Form -->
+  <div class="card" style="background:var(--lav)">
+    <h3>New / Returning Booking</h3>
+    <form id="bookForm">
+      <div class="row">
+        <div style="flex:0 0 140px"><label>PID</label><input id="pid" class="input" readonly></div>
+        <div style="flex:1 1 260px"><label>Patient Name *</label><input id="patientName" class="input" required></div>
+        <div style="flex:0 0 180px"><label>Contact (10 digits) *</label>
+          <input id="contact" class="input" required maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+        </div>
+        <div style="flex:0 0 160px"><label>Channel *</label>
+          <select id="channel" class="input"><option>Walk</option><option>Online</option><option>WhatsApp</option></select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="flex:0 0 180px"><label>DOB</label><input id="dob" class="input" type="date"></div>
+        <div style="flex:0 0 160px"><label>Age (auto)</label><input id="age" class="input" readonly></div>
+        <div style="flex:0 0 160px"><label>Gender</label>
+          <select id="gender" class="input"><option value="">—</option><option>Male</option><option>Female</option><option>Other</option></select>
+        </div>
+        <div style="flex:1 1 260px"><label>Reason</label><input id="reason" class="input" placeholder="Fever, cold, etc."></div>
+      </div>
+
+      <div class="row">
+        <div style="flex:0 0 140px"><label>Height (cm)</label><input id="height" class="input" type="number"></div>
+        <div style="flex:0 0 140px"><label>Weight (kg)</label><input id="weight" class="input" type="number"></div>
+        <div style="flex:0 0 140px"><label>Temp (°C)</label><input id="temp" class="input" type="number"></div>
+        <div style="flex:1 1 260px"><label>Guardian</label><input id="guardian" class="input"></div>
+      </div>
+
+      <div class="row">
+        <div style="flex:2 1 360px"><label>Address</label><input id="address" class="input"></div>
+        <div style="flex:1 1 160px"><label>City</label><input id="city" class="input" placeholder="Warangal"></div>
+        <div style="flex:0 0 120px"><label>PIN</label><input id="pin" class="input" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"></div>
+      </div>
+
+      <div class="row">
+        <div style="flex:0 0 180px"><label>Payment Mode *</label>
+          <select id="payMode" class="input"><option>Cash</option><option>UPI</option><option>Card</option><option>Other</option></select>
+        </div>
+        <div style="flex:1 1 240px"><label>UPI Ref / Notes</label><input id="payRef" class="input" placeholder="Ref no / Notes"></div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="muted">* Required fields</div>
+        <div style="flex:0 0 300px;display:flex;gap:8px">
+          <button class="btn" id="btnPrintLast" type="button">🖨️ Print Last</button>
+          <button class="btn primary" id="btnSave" type="submit">Save & Generate Token</button>
+        </div>
+      </div>
+    </form>
+    <div id="msg" class="alert"></div>
+  </div>
+
+  <!-- Today’s Queue -->
+  <div class="card" style="background:var(--peach)">
+    <div class="row">
+      <h3>Today’s Queue</h3>
+      <div class="right"><button class="btn" id="btnCSV">Export CSV</button></div>
+    </div>
+    <table class="table" id="qTable">
+      <thead><tr><th>Time</th><th>PID</th><th>Token</th><th>QR</th><th>Name</th><th>Age</th><th>Reason</th><th>Channel</th><th>Payment</th><th>Contact</th><th>Print</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+/* header doctor lines from config */
+(async function(){
+  try{
+    const r = await fetch('/config/doctor-config.json',{cache:'no-store'});
+    const c = await r.json();
+    const line = [c.doctorName,c.degrees,c.designation,c.regNo].filter(Boolean).join(' · ');
+    document.getElementById('clinicTitle').textContent = c.clinicName || 'Bookings';
+    document.getElementById('docSubtitle').textContent = line || document.getElementById('docSubtitle').textContent;
+  }catch{}
+})();
+
+/* helpers + age */
+const $ = s => document.querySelector(s);
+const msg = (t, ok=false)=>{ const el=$("#msg"); el.className="alert "+(ok?"ok":""); el.textContent=t; el.style.display="block"; setTimeout(()=>el.style.display="none",3000); };
+function calcAgeStr(d){ if(!d) return ""; const dob=new Date(d), now=new Date(); let y=now.getFullYear()-dob.getFullYear(); let m=now.getMonth()-dob.getMonth(); if(now.getDate()<dob.getDate()) m--; if(m<0){y--; m+=12;} return (y>0?`${y}y `:"")+(m>0?`${m}m`:""); }
+$("#dob").addEventListener("change", e => { $("#age").value = calcAgeStr(e.target.value); });
+
+/* wait for DB */
+const _dbWait = setInterval(()=>{ if (window.DB) { clearInterval(_dbWait); startBookingApp(); } }, 150);
+
+function startBookingApp(){
+  let _last=null;
+
+  $("#btnSearchPID").onclick = searchPID;
+  $("#btnClear").onclick = () => { $("#bookForm").reset(); $("#pid").value=""; $("#age").value=""; };
+  $("#btnPrintLast").onclick = () => { if(!_last) return msg("No recent booking"); openPrint(_last); };
+  $("#btnCSV").onclick = exportCSV;
+
+  async function searchPID(){
+    let pid = ($("#pidSearch").value||"").toUpperCase().replace(/\s+/g,'').trim();
+    if(!pid) return msg("Enter PID");
+    try{
+      let p = null;
+      if (DB.findPatientByPID) p = await DB.findPatientByPID(pid);
+      if (!p){ const db = new Dexie('clinicdb'); await db.open(); p = await db.table('patients').get(pid) || await db.table('patients').where('pid').equals(pid).first(); db.close(); }
+      if(!p) return msg("No record for "+pid);
+      ["pid","patientName","contact","gender","dob","height","weight","temp","guardian","address","city","pin"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=p[id]||""; });
+      $("#age").value = calcAgeStr(p.dob);
+      msg("Loaded "+pid,true);
+    }catch(e){ console.error(e); msg("Lookup failed"); }
+  }
+
+  async function findExistingPIDByNamePhone(name, phone){
+    if (DB.findPatientByNamePhone) return await DB.findPatientByNamePhone(name, phone);
+    try{ const db=new Dexie('clinicdb'); await db.open(); const p=await db.table('patients').where({patientName:name,contact:phone}).first(); db.close(); return p?.pid||null; }catch{ return null; }
+  }
+  async function nextTokenSafe(channel){
+    if (DB.nextToken) return DB.nextToken(channel);
+    const key="tok_"+new Date().toISOString().slice(0,10);
+    const n=(+localStorage.getItem(key)||0)+1; localStorage.setItem(key,String(n)); return n;
+  }
+
+  $("#bookForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const name=$("#patientName").value.trim();
+    const phone=$("#contact").value.trim();
+    const ch=$("#channel").value;
+    if(!name) return msg("Enter name");
+    if(!/^[0-9]{10}$/.test(phone)) return msg("Invalid contact");
+
+    try{
+      const existingPID = await findExistingPIDByNamePhone(name, phone);
+      let pidVal = existingPID || $("#pid").value.trim();
+      if (!pidVal) pidVal = await DB.nextPID();
+      if (existingPID) { $("#pid").value = existingPID; msg(`Existing patient · PID ${existingPID} reused`, true); }
+
+      const token = await nextTokenSafe(ch);
+      const doc = {
+        pid: pidVal, date: (DB.todayISO? DB.todayISO() : new Date().toISOString().slice(0,10)),
+        ts: Date.now(), token, channel: ch,
+        patientName: name, contact: phone,
+        gender:$("#gender").value, dob:$("#dob").value, age:calcAgeStr($("#dob").value),
+        reason:$("#reason").value, guardian:$("#guardian").value,
+        address:$("#address").value, city:$("#city").value, pin:$("#pin").value,
+        height:$("#height").value, weight:$("#weight").value, temp:$("#temp").value,
+        payMode: $("#payMode").value, payRef: $("#payRef").value,
+        status:"queued"
+      };
+
+      if (DB.addOrUpdatePatient) await DB.addOrUpdatePatient({...doc}); else await dexieUpsertPatient({...doc});
+      if (DB.addBooking) await DB.addBooking(doc); else await dexieAddBooking(doc);
+
+      _last = doc; $("#pid").value = pidVal;
+      msg(`Saved ${name} · PID ${pidVal} · Token ${token}`, true);
+      await refresh();
+      openPrint(doc); // open external print page
+    }catch(err){ console.error(err); msg("Save failed. Check DB.js / IndexedDB"); }
+  });
+
+  async function dexieUpsertPatient(p){
+    const db=new Dexie('clinicdb');
+    db.version(1).stores({patients:'pid,patientName,contact,dob', bookings:'++id,date,ts,pid,token'});
+    await db.open();
+    const exist = await db.table('patients').where({patientName:p.patientName,contact:p.contact}).first();
+    if (exist) await db.table('patients').update(exist.pid, p); else await db.table('patients').put(p);
+    db.close();
+  }
+  async function dexieAddBooking(b){
+    const db=new Dexie('clinicdb');
+    db.version(1).stores({patients:'pid,patientName,contact,dob', bookings:'++id,date,ts,pid,token'});
+    await db.open(); await db.table('bookings').add(b); db.close();
+  }
+
+  function openPrint(d){
+    // pass data via querystring; also stash in localStorage as fallback
+    const payload = encodeURIComponent(JSON.stringify(d));
+    localStorage.setItem('last_booking', JSON.stringify(d));
+    const w = window.open(`/print/booking-slip.html?print=1&data=${payload}`, '_blank');
+    if(!w) msg('Allow popups to print slip');
+  }
+
+  async function refresh(){
+    try{
+      const rows = (DB.listBookingsToday) ? await DB.listBookingsToday() : await dexieListToday();
+      const tb=$("#qTable tbody"); tb.innerHTML="";
+      for(const r of rows){
+        const t=new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        const payload=encodeURIComponent(JSON.stringify(r));
+        const qrId = "qrmini_"+r.pid+"_"+r.token;
+        tb.insertAdjacentHTML('beforeend',
+          `<tr>
+            <td>${t}</td><td>${r.pid}</td><td>${r.token}</td>
+            <td><div id="${qrId}" class="qr-mini"></div></td>
+            <td>${r.patientName}</td><td>${r.age||""}</td><td>${r.reason||""}</td>
+            <td>${r.channel}</td><td>${r.payMode||"-"}</td>
+            <td><a href="tel:${r.contact}">${r.contact}</a></td>
+            <td><button class="btn" onclick='window.open("/print/booking-slip.html?print=1&data=${payload}","_blank")'>🖨️</button></td>
+          </tr>`);
+        new QRCode(document.getElementById(qrId),{text:r.pid,width:44,height:44,correctLevel:QRCode.CorrectLevel.L});
+      }
+    }catch(e){ console.warn(e); }
+  }
+  async function dexieListToday(){
+    const db=new Dexie('clinicdb');
+    db.version(1).stores({patients:'pid,patientName,contact,dob', bookings:'++id,date,ts,pid,token'});
+    await db.open();
+    const today=new Date().toISOString().slice(0,10);
+    const rows=await db.table('bookings').where('date').equals(today).sortBy('ts');
+    db.close(); return rows;
+  }
+
+  async function exportCSV(){
+    const rows = (DB.listBookingsToday) ? await DB.listBookingsToday() : await dexieListToday();
+    const lines=["Time,PID,Token,Name,Age,Gender,Reason,Channel,Payment,Contact"];
+    rows.forEach(r=>{const t=new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});lines.push(`${t},${r.pid},${r.token},${r.patientName},${r.age||""},${r.gender||""},${r.reason||""},${r.channel},${r.payMode||""},${r.contact}`);});
+    const blob=new Blob([lines.join("\n")],{type:"text/csv"}); const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="bookings.csv"; a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  // fallback inline print kept for safety
+  function slipHTML(d,dup){
+    return `<div class="slip">
+      <h3>Dr. Charan Child Clinic${dup?" (Duplicate)":""}</h3>
+      <div class="prow"><span><b>Token:</b> ${d.token}</span><span><b>Date:</b> ${d.date}</span></div>
+      <div class="prow"><span><b>PID:</b> ${d.pid}</span><span><b>Name:</b> ${d.patientName}</span></div>
+      <div class="prow"><span><b>Age:</b> ${d.age||"-"}</span><span><b>Gender:</b> ${d.gender||"-"}</span></div>
+      <div class="prow"><span><b>Reason:</b> ${d.reason||"-"}</span><span><b>Contact:</b> ${d.contact||"-"}</span></div>
+      <div class="prow"><span><b>Payment:</b> ${d.payMode||"-"}</span><span><b>Ref:</b> ${d.payRef||"-"}</span></div>
+      <div class="prow qrwrap"><b>QR:</b> <span id="${dup?'qrB':'qrA'}"></span></div>
+      <div class="foot">Powered by Onestop AI Services</div>
+    </div>`;
+  }
+  window.printSlip = function(d){
+    const pa=$("#printArea");
+    pa.innerHTML = `<div class="sheet">${slipHTML(d,false)}${slipHTML(d,true)}</div>`;
+    new QRCode(document.getElementById("qrA"),{text:JSON.stringify({pid:d.pid,name:d.patientName}),width:100,height:100});
+    new QRCode(document.getElementById("qrB"),{text:JSON.stringify({pid:d.pid,name:d.patientName}),width:100,height:100});
+    window.print(); pa.innerHTML="";
+  }
+
+  refresh(); setInterval(refresh, 8000);
+}
+</script>
+
+<!-- keep engines in sync -->
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<script src="/scripts/app-wiring.js?v=1.0"></script>
+<script src="/scripts/seed-and-diagnostics.js?v=1.3"></script>
+</body>
+</html>

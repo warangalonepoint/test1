@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OPD Summary · Print</title>
+
+<style>
+:root{
+  --ink:#0f172a; --muted:#475569; --line:#e5e7eb; --bg:#ffffff; --accent:#E86D2D;
+}
+*{box-sizing:border-box}
+html,body{background:#f3f6fb;color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.wrap{max-width:1000px;margin:0 auto;padding:12px}
+
+/* helper cards (visible only on screen) */
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:14px;margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;font:inherit}
+.btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer}
+small.muted{color:var(--muted)}
+hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
+
+/* A4 sheet */
+.sheet{position:relative;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:18px;overflow:hidden}
+.a4{width:210mm;min-height:297mm;margin:auto}
+.sheet::before{ /* watermark */
+  content:""; position:absolute; inset:0; opacity:.06; pointer-events:none;
+  background-repeat:no-repeat; background-position:center; background-size:60%;
+  filter:grayscale(100%);
+}
+
+/* header */
+.head{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.logo{height:56px}
+.rx{font-weight:900;font-size:40px;color:#1f2937;text-align:right}
+.clinic{font-weight:900;font-size:22px;color:#a12c2c;text-align:center}
+.telugu{font-weight:800;color:#1a1a1a;font-size:14px}
+.qual{font-size:12px;color:#1f2937}
+.timing{margin:10px 0;background:var(--accent);color:#fff;padding:8px;border-radius:8px;text-align:center;font-weight:800}
+
+/* info blocks */
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kv{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px}
+.kv .k{font-weight:700}
+
+.vitals{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:6px}
+.vitals .cell{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px}
+.vitals .k{font-weight:700}
+
+.sec{margin-top:10px}
+.sec h3{margin:8px 0 6px;font-size:15px;text-transform:uppercase;letter-spacing:.3px}
+.box{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px}
+
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border:1px solid #3332;padding:6px;vertical-align:top}
+.table th{background:#f3f4f6}
+
+.sig{display:flex;justify-content:flex-end;margin-top:14px}
+.sig .line{width:240px;border-top:1px solid #0008;text-align:center;font-size:12px;padding-top:4px}
+
+.footer{margin-top:8px;text-align:center;font-size:12px;color:#222}
+.ribbon{margin-top:8px;background:#4b5563;color:#fff;padding:8px 12px;border-radius:8px;text-align:center;font-weight:800}
+.emg{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px}
+.emg .badge{font-weight:800;color:#0b4da2}
+.emg img{height:28px}
+
+/* print */
+@media print{
+  body{background:#fff} .tools{display:none!important}
+  .sheet{box-shadow:none;border:none;padding:10mm} .a4{margin:0}
+}
+</style>
+<style id="wmStyle"></style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Tools (screen only) -->
+  <div class="card tools">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div><b>Print OPD</b> <small class="muted">Auto-load last OPD, load by PID, or paste JSON</small></div>
+      <div class="row">
+        <button class="btn" id="btnLoadAuto">Auto: Last Saved</button>
+        <div class="row" style="align-items:end">
+          <div>
+            <label class="label">PID</label>
+            <input id="pid" class="input" placeholder="P00001"/>
+          </div>
+          <button class="btn" id="btnLoadPID">Load by PID</button>
+        </div>
+      </div>
+    </div>
+    <hr class="sep">
+    <div class="row">
+      <div style="flex:2 1 480px">
+        <label class="label">Or paste OPD JSON</label>
+        <textarea id="paste" class="input" style="min-height:140px" placeholder='{"pid":"P0001","name":"..."}'></textarea>
+      </div>
+      <div style="flex:1 1 300px">
+        <label class="label">Doctor Config (saved in browser)</label>
+        <textarea id="cfg" class="input" style="min-height:140px"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="btn" id="btnApplyCfg">Save Config</button>
+          <button class="btn" id="btnDefaults">Reset Defaults</button>
+        </div>
+      </div>
+    </div>
+    <div id="msg" style="margin-top:6px;color:#065f46;display:none"></div>
+  </div>
+
+  <!-- A4 OPD Sheet -->
+  <div class="card sheet a4" id="sheet">
+    <div class="head">
+      <div>
+        <div class="telugu" id="cfg_telugu">డా|| చరణ్ థేజారెడ్డి గురిజాల</div>
+        <div class="qual" id="cfg_qual">MBBS, DNB (Paediatrics), MNAMS, PGPN (Boston)</div>
+        <div class="qual" id="cfg_spec">Consultant Paediatrician &amp; Neonatologist</div>
+        <div class="qual" id="cfg_reg">Reg. No. 74740</div>
+      </div>
+      <div style="text-align:center">
+        <img id="cfg_logo" class="logo" src="./assets/logo.png" alt="Logo"/>
+        <div class="clinic" id="cfg_clinic">DR. CHARAN CHILD CLINIC</div>
+      </div>
+      <div><div class="rx">℞</div></div>
+    </div>
+
+    <div class="timing" id="cfg_time">TIMINGS: MON–SAT 9:00 AM – 12:00 PM | 6:00 PM – 9:00 PM | SUNDAY 10:00 AM – 2:00 PM</div>
+
+    <div class="grid4">
+      <div class="kv"><div class="k">UHID</div><div id="v_uhid">—</div></div>
+      <div class="kv"><div class="k">Visit No</div><div id="v_visitno">—</div></div>
+      <div class="kv"><div class="k">Patient</div><div id="v_name">—</div></div>
+      <div class="kv"><div class="k">Visit Date</div><div id="v_date">—</div></div>
+      <div class="kv"><div class="k">DOB / Age / Sex</div><div id="v_age">—</div></div>
+      <div class="kv"><div class="k">Consultation</div><div id="v_consult">—</div></div>
+      <div class="kv"><div class="k">Doctor</div><div id="v_doc">Dr. Charan Theja Reddy Gurijala</div></div>
+      <div class="kv"><div class="k">Next Visit</div><div id="v_next">—</div></div>
+    </div>
+
+    <div class="vitals">
+      <div class="cell"><span class="k">Ht</span>: <span id="v_ht">—</span></div>
+      <div class="cell"><span class="k">Wt</span>: <span id="v_wt">—</span></div>
+      <div class="cell"><span class="k">BSA</span>: <span id="v_bsa">—</span></div>
+      <div class="cell"><span class="k">BMI</span>: <span id="v_bmi">—</span></div>
+      <div class="cell"><span class="k">Temp</span>: <span id="v_temp">—</span></div>
+      <div class="cell"><span class="k">Pulse</span>: <span id="v_pulse">—</span></div>
+      <div class="cell"><span class="k">SPO₂</span>: <span id="v_spo2">—</span></div>
+      <div class="cell"><span class="k">BP</span>: <span id="v_bp">—</span></div>
+      <div class="cell"><span class="k">Token</span>: <span id="v_token">—</span></div>
+      <div class="cell"><span class="k">Phone</span>: <span id="v_phone">—</span></div>
+    </div>
+
+    <div class="sec"><h3>Chief Complaints</h3><div id="s_cc" class="box">—</div></div>
+    <div class="sec"><h3>Examination</h3><div id="s_exam" class="box">—</div></div>
+    <div class="sec"><h3>Diagnosis</h3><div id="s_dx" class="box">—</div></div>
+
+    <div class="sec">
+      <h3>Medications</h3>
+      <table class="table" id="tbl_rx">
+        <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th><th>Remarks</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <small class="muted">* Take medicines exactly as prescribed.</small>
+    </div>
+
+    <div class="sec" id="lab_block" style="display:none">
+      <h3>Laboratory Orders</h3>
+      <table class="table" id="tbl_lab">
+        <thead><tr><th>#</th><th>Test</th><th>Notes</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="sec"><h3>Doctor Recommendations</h3><div id="s_plan" class="box">—</div></div>
+
+    <div class="sig"><div class="line">( <span id="sig_dname">Dr. Charan Theja Reddy Gurijala</span> )</div></div>
+
+    <div class="emg">
+      <img src="./assets/dolphin.png" alt="Dolphin">
+      <div><span class="badge">For Emergencies:</span> Dolphin Children’s Hospital, Opp. Kasam Brothers Lane, Beside Police Station, Hanamkonda Chowrastha, Warangal — Ph: <b>6309172007 / 6309173007</b></div>
+    </div>
+    <div class="ribbon" id="cfg_appoint">For Appointment: +91 83408 40340</div>
+    <div class="footer" id="cfg_footer">H.No. 2-1-45, Saraswathi Nagar, Gopalapuram, Hanamkonda, Telangana – 506 001.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script>
+/* ---------- Config ---------- */
+const CFG_KEY='doctor_config_json';
+const defaults={
+  clinic:"DR. CHARAN CHILD CLINIC",
+  doctor_name:"Dr. Charan Theja Reddy Gurijala",
+  telugu_line:"డా|| చరణ్ థేజారెడ్డి గురిజాల",
+  qualification:"MBBS, DNB (Paediatrics), MNAMS, PGPN (Boston)",
+  specialization:"Consultant Paediatrician & Neonatologist",
+  reg_no:"74740",
+  timings:"TIMINGS: MON–SAT 9:00 AM – 12:00 PM | 6:00 PM – 9:00 PM | SUNDAY 10:00 AM – 2:00 PM",
+  logo:"./assets/logo.png",
+  address:"H.No. 2-1-45, Saraswathi Nagar, Gopalapuram, Hanamkonda, Telangana – 506 001.",
+  appointment:"+91 83408 40340",
+  emergency_hospital:"Dolphin Children’s Hospital",
+  emergency_phone:"6309172007 / 6309173007"
+};
+const $=s=>document.querySelector(s);
+function toast(t){const m=$("#msg");m.textContent=t;m.style.display='block';setTimeout(()=>m.style.display='none',1500);}
+function loadCfg(){try{return {...defaults,...(JSON.parse(localStorage.getItem(CFG_KEY)||'{}'))};}catch{return {...defaults};}}
+function saveCfg(c){localStorage.setItem(CFG_KEY,JSON.stringify(c));toast('Config saved');}
+function applyWatermark(url){document.getElementById('wmStyle').textContent=`.sheet::before{background-image:url("${url}")}`;}
+function applyCfg(c){
+  $('#cfg_telugu').textContent=c.telugu_line;
+  $('#cfg_qual').textContent=c.qualification;
+  $('#cfg_spec').textContent=c.specialization;
+  $('#cfg_reg').textContent="Reg. No. "+c.reg_no;
+  $('#cfg_logo').src=c.logo||defaults.logo;
+  $('#cfg_clinic').textContent=c.clinic;
+  $('#cfg_time').textContent=c.timings;
+  $('#cfg_footer').textContent=c.address;
+  $('#cfg_appoint').textContent="For Appointment: "+c.appointment;
+  $('#sig_dname').textContent=c.doctor_name;
+  $('#v_doc').textContent=c.doctor_name;
+  $('#cfg').value=JSON.stringify(c,null,2);
+  applyWatermark(c.logo||defaults.logo);
+}
+
+/* ---------- Data render ---------- */
+async function dexieOpen(){
+  const db=new Dexie('clinicdb');
+  db.version(1).stores({opd:'++id,ts,pid,date'});
+  try{await db.open();}catch{}
+  return db;
+}
+
+function renderOPD(rec){
+  if(!rec) return;
+  $('#v_uhid').textContent=rec.pid||'—';
+  $('#v_visitno').textContent=rec.refToken||'—';
+  $('#v_name').textContent=rec.name||'—';
+  $('#v_date').textContent=new Date(rec.ts||Date.now()).toLocaleString();
+  $('#v_age').textContent=`${rec.age||'-'} / ${rec.gender||'-'}`;
+  $('#v_consult').textContent=rec.visitType||'First / Follow-up';
+  $('#v_token').textContent=rec.refToken||'—';
+  $('#v_phone').textContent=rec.phone||'—';
+  $('#v_next').textContent=rec.nextVisit||'—';
+
+  const v=rec.vitals||{};
+  $('#v_ht').textContent=v.height||'—';
+  $('#v_wt').textContent=v.weight||'—';
+  $('#v_bsa').textContent=v.bsa||'—';
+  $('#v_bmi').textContent=v.bmi||'—';
+  $('#v_temp').textContent=v.temp||'—';
+  $('#v_pulse').textContent=v.pulse||'—';
+  $('#v_spo2').textContent=v.spo2||'—';
+  $('#v_bp').textContent=v.bp||'—';
+
+  $('#s_cc').textContent=(rec.notes?.cc||'').trim()||'—';
+  $('#s_exam').textContent=(rec.notes?.exam||'').trim()||'—';
+  $('#s_dx').textContent=(rec.notes?.dx||'').trim()||'—';
+  $('#s_plan').textContent=(rec.notes?.plan||'').trim()||'—';
+
+  const rx=Array.isArray(rec.rx)?rec.rx:[];
+  const rtbody=$("#tbl_rx tbody"); rtbody.innerHTML='';
+  rx.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td>${r.name||''}</td><td>${r.dose||''}</td><td>${r.freq||''}</td><td>${r.days||''}</td><td>${r.qty||''}</td><td>${r.remark||''}</td>`;
+    rtbody.appendChild(tr);
+  });
+
+  const labs=Array.isArray(rec.labs)?rec.labs:[];
+  const ltbody=$("#tbl_lab tbody"); ltbody.innerHTML='';
+  if(labs.length){
+    $('#lab_block').style.display='block';
+    labs.forEach((t,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${i+1}</td><td>${t.test||t.name||''}</td><td>${t.note||''}</td>`;
+      ltbody.appendChild(tr);
+    });
+  }else{
+    $('#lab_block').style.display='none';
+  }
+}
+
+/* ---------- Loaders ---------- */
+async function loadAuto(){
+  try{
+    // Staged payload from OPD
+    const staged=JSON.parse(localStorage.getItem('opd_print_payload')||'null');
+    if(staged){ renderOPD(staged); return; }
+  }catch{}
+  const db=await dexieOpen();
+  try{
+    const all=await db.table('opd').toArray();
+    all.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(all[0]) renderOPD(all[0]);
+  }catch{}
+}
+
+async function loadByPID(){
+  const pid=$('#pid').value.trim();
+  if(!pid) return;
+  const db=await dexieOpen();
+  try{
+    const rows=await db.table('opd').where('pid').equals(pid).toArray();
+    rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(rows[0]) renderOPD(rows[0]);
+  }catch{}
+}
+
+function pasteJSON(){
+  try{
+    const obj=JSON.parse($('#paste').value||'');
+    renderOPD(obj);
+    toast('Loaded from pasted JSON');
+  }catch(e){
+    toast('Invalid JSON');
+  }
+}
+
+/* ---------- Wire UI ---------- */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  const cfg=loadCfg(); applyCfg(cfg);
+
+  // Query param ?pid=...
+  const pidParam=new URL(location.href).searchParams.get('pid');
+  if(pidParam){ $('#pid').value=pidParam; await loadByPID(); } else { await loadAuto(); }
+
+  $('#btnLoadAuto').onclick=loadAuto;
+  $('#btnLoadPID').onclick=loadByPID;
+  $('#paste').addEventListener('change',pasteJSON);
+
+  $('#btnApplyCfg').onclick=()=>{
+    try{ const c=JSON.parse($('#cfg').value||'{}'); saveCfg(c); applyCfg(loadCfg()); }
+    catch{ toast('Invalid config JSON'); }
+  };
+  $('#btnDefaults').onclick=()=>{ saveCfg(defaults); applyCfg(loadCfg()); };
+});
+</script>
+</body>
+</html>

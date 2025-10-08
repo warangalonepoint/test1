@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OPD Records · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="./scripts/db.js"></script>
+<style>
+:root{--bg:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);--card:#fff;--ink:#0f172a;--muted:#475569;--primary:#17B26A;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.06);--banner-bg:#f5f3ff;--banner-line:#e5e7eb}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.topbar{margin-top:10px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);background:var(--banner-bg);border:1px solid var(--banner-line)}
+.topbar .row{display:flex;align-items:center;gap:12px;padding:10px 12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:40px}
+.brand .title{font-weight:800;font-size:18px}
+.brand .sub{font-size:12px;color:var(--muted)}
+.links{margin-left:auto;display:flex;gap:8px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="row">
+      <div class="brand">
+        <img src="./assets/logo.png" alt="logo">
+        <div>
+          <div class="title">OPD Records</div>
+          <div class="sub">Search · Print · CSV export</div>
+        </div>
+      </div>
+      <div class="links">
+        <a class="btn" href="./opd-live.html">OPD (Live)</a>
+        <a class="btn" href="./index.html">Home</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:#E8F6ED">
+    <div class="row" style="align-items:end">
+      <div style="flex:1 1 260px">
+        <label>Search by PID or Phone</label>
+        <input id="q" class="input" placeholder="P00123 or 10-digit phone">
+      </div>
+      <div style="flex:0 0 140px"><button class="btn" id="btnSearch">Search</button></div>
+      <div style="flex:0 0 120px"><button class="btn" id="btnClear">Clear</button></div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <div class="badge" id="total">Total: 0</div>
+        <button class="btn" id="btnCSV">Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:#FFF8F0">
+    <table class="table" id="tbl">
+      <thead>
+        <tr>
+          <th>Date/Time</th><th>PID</th><th>Name</th><th>Phone</th>
+          <th>Complaints</th><th>Diagnosis</th><th>BMI</th><th>Next Visit</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+let ALL=[], ENRICHED=[];
+
+async function dexieOpen(){const db=new Dexie('clinicdb');try{db.version(1).stores({patients:'pid,patientName,contact',opd:'++id,ts,pid'});await db.open();}catch{}return db;}
+async function phoneByPID(pid){
+  try{
+    if (window.DB?.findPatientByPID){
+      const p=await DB.findPatientByPID(pid).catch(()=>null);
+      return p?.contact||"";
+    }
+    const db=await dexieOpen();
+    const p=await db.table('patients').get(pid) || await db.table('patients').where('pid').equals(pid).first();
+    db.close();
+    return p?.contact||"";
+  }catch{return "";}
+}
+
+async function loadAll(){
+  // from DB helper or dexie or localStorage fallback
+  try{
+    if (window.DB?.listOPD){
+      ALL = await DB.listOPD();
+    }else{
+      const db=await dexieOpen();
+      ALL = await db.table('opd').toArray();
+      db.close();
+      try{ const ls=JSON.parse(localStorage.getItem('opd_local_json')||'[]'); ALL=ALL.concat(ls); }catch{}
+    }
+  }catch{ ALL=[]; }
+
+  // normalize
+  ALL = (ALL||[]).map(r=>({
+    ts: r.ts, pid:r.pid, name:r.name||'', phone:r.phone||'',
+    height: r.vitals?.height||r.height, weight:r.vitals?.weight||r.weight, temp:r.vitals?.temp||r.temp,
+    complaints: r.notes?.cc ?? r.complaints ?? '',
+    diagnosis:  r.notes?.dx ?? r.diagnosis ?? '',
+    nextVisit:  r.nextVisit || r.nextVisitDate || ''
+  })).sort((a,b)=>(b.ts||0)-(a.ts||0));
+
+  // enrich phone if empty
+  const map=new Map();
+  await Promise.all(ALL.map(async r=>{ if(!r.phone && !map.has(r.pid)) map.set(r.pid, await phoneByPID(r.pid)); }));
+  ENRICHED = ALL.map(r=>({...r, phone: r.phone || map.get(r.pid) || ""}));
+  $("#total").textContent = "Total: "+ENRICHED.length;
+}
+
+function bmi(h,w){h=+h||0;w=+w||0;const m=h?h/100:0;const v=(m>0&&w>0)?(w/(m*m)):0;return v?v.toFixed(2):"";}
+function render(list=ENRICHED){
+  const tb=$("#tbl tbody"); tb.innerHTML="";
+  list.forEach(r=>{
+    const dt=new Date(r.ts||Date.now()).toLocaleString();
+    const payload=encodeURIComponent(JSON.stringify(r));
+    tb.insertAdjacentHTML("beforeend",
+      `<tr>
+        <td>${dt}</td>
+        <td><a href="./opd-live.html?pid=${encodeURIComponent(r.pid)}">${r.pid||""}</a></td>
+        <td>${r.name||""}</td>
+        <td>${r.phone||""}</td>
+        <td>${r.complaints||""}</td>
+        <td>${r.diagnosis||""}</td>
+        <td>${bmi(r.height,r.weight)}</td>
+        <td>${r.nextVisit||""}</td>
+        <td>
+          <button class="btn" onclick='printRec(JSON.parse(decodeURIComponent("${payload}")))'>Print</button>
+        </td>
+      </tr>`
+    );
+  });
+}
+
+$("#btnSearch").onclick=()=>{
+  const q=$("#q").value.trim().toUpperCase();
+  if(!q) return render();
+  const byPid = ENRICHED.filter(r=>(r.pid||"").toUpperCase().includes(q));
+  const byPhone = ENRICHED.filter(r=>(r.phone||"").includes(q));
+  const ids=new Set(); const out=[];
+  [...byPid,...byPhone].forEach(r=>{const k=r.pid+"_"+r.ts; if(!ids.has(k)){ids.add(k); out.push(r);} });
+  render(out);
+};
+$("#btnClear").onclick=()=>{ $("#q").value=""; render(); };
+
+$("#btnCSV").onclick=()=>{
+  const rows=[["DateTime","PID","Name","Phone","Complaints","Diagnosis","BMI","NextVisit"]];
+  ENRICHED.forEach(r=>rows.push([
+    new Date(r.ts||Date.now()).toLocaleString(), r.pid||"", r.name||"", r.phone||"",
+    r.complaints||"", r.diagnosis||"", bmi(r.height,r.weight), r.nextVisit||""
+  ]));
+  const csv=rows.map(a=>a.map(x=>String(x).replaceAll('"','""')).map(x=>`"${x}"`).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="opd-records.csv"; a.click(); URL.revokeObjectURL(a.href);
+};
+
+window.printRec = (r)=>{
+  const w=window.open("","_blank");
+  w.document.write(`<html><head><title>OPD Record</title></head><body style="font:14px system-ui;padding:12mm">
+  <h2 style="margin:0 0 6px">OPD Record</h2>
+  <div><b>Date:</b> ${new Date(r.ts).toLocaleString()}</div>
+  <div><b>PID:</b> ${r.pid} &nbsp; <b>Name:</b> ${r.name||""} &nbsp; <b>Phone:</b> ${r.phone||""}</div>
+  <hr/>
+  <div><b>Complaints:</b> ${r.complaints||""}</div>
+  <div><b>Diagnosis:</b> ${r.diagnosis||""}</div>
+  <div><b>Vitals:</b> H ${r.height||"-"} cm · W ${r.weight||"-"} kg · Temp ${r.temp||"-"}°C · BMI ${ (function(h,w){h=+h||0;w=+w||0;const m=h?h/100:0;const v=(m>0&&w>0)?(w/(m*m)):0;return v?v.toFixed(2):"-";})(r.height,r.weight)}</div>
+  <div><b>Next Visit:</b> ${r.nextVisit||"-"}</div>
+  <div style="margin-top:12px;text-align:center;font-size:12px;color:#555">Powered by Onestop AI Services</div>
+  </body></html>`);
+  w.document.close(); w.print();
+};
+
+(async function init(){ await loadAll(); render(); })();
+</script>
+</body>
+</html>

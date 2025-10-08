@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GST Reports · Pharmacy · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="./config.js"></script>
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);
+  --mint:#D6E5DD;--lav:#DED8F2;--peach:#FFE8D9;--teal:#C8F5E4;
+  --card:#fff;--ink:#0f172a;--muted:#475569;--primary:#139a5b;
+  --r:16px;--shadow:0 6px 18px rgba(0,0,0,.08);
+}
+:root{--header-tint:#C8F5E4;--header-tint-rgba:200,245,228;--banner-tint:#DED8F2;--banner-tint-rgba:222,216,242}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+a{color:inherit;text-decoration:none}
+
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;
+background:rgba(var(--header-tint-rgba),.7);border:1px solid #0001;border-radius:12px;
+margin-top:10px;box-shadow:var(--shadow);}
+.header .logo{height:40px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.btn:hover{background:#f1f5f9}
+
+.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:var(--banner-tint)}
+.banner img{width:100%;transform:scale(.65);display:block;border-radius:var(--r);mix-blend-mode:multiply;opacity:.95}
+.banner::after{content:"";position:absolute;inset:0;
+background:linear-gradient(0deg,rgba(var(--banner-tint-rgba),.3),rgba(var(--banner-tint-rgba),.3))}
+
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:right}
+.table th:first-child,.table td:first-child{text-align:left}
+.table th{background:#f1f5f9}
+.total{font-weight:700;font-size:15px;text-align:right;padding:4px 0}
+.footer{text-align:center;padding:16px 4px;font-size:13px;color:var(--muted);margin:22px 0 14px}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:10px}
+.box{background:#fff9;backdrop-filter:blur(6px);border-radius:var(--r);padding:10px;text-align:center;box-shadow:var(--shadow)}
+.box h3{margin:0;font-size:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <img class="logo" src="./assets/logo.png" alt="logo">
+    <div>
+      <div style="font-weight:700;font-size:18px">GST Reports</div>
+      <div style="font-size:13px;color:var(--muted)">Sales vs Purchase · Monthly Summary</div>
+    </div>
+    <div class="row" style="display:flex;gap:6px">
+      <a class="btn" href="./pharmacy.html">Pharmacy Hub</a>
+      <a class="btn" href="./index.html">Home</a>
+    </div>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <div class="card" style="background:var(--teal)">
+    <div class="filters">
+      <label>Month :</label><input type="month" id="month" onchange="calc()">
+      <button class="btn primary" onclick="calc()">Refresh</button>
+      <button class="btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+
+    <table class="table" id="gstTable">
+      <thead><tr><th>GST Slab (%)</th><th>Sales Value (₹)</th><th>Purchase Value (₹)</th><th>Net GST Diff (₹)</th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="3" class="total">Net Payable GST</td><td id="netPay">0.00</td></tr></tfoot>
+    </table>
+
+    <div class="summary">
+      <div class="box"><h3 id="saleTot">0.00</h3><small>Total Sales</small></div>
+      <div class="box"><h3 id="purchTot">0.00</h3><small>Total Purchases</small></div>
+      <div class="box"><h3 id="gstTot">0.00</h3><small>GST Net Payable</small></div>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+function load(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return[]}}
+function calc(){
+  const m=document.getElementById('month').value||new Date().toISOString().slice(0,7);
+  const sales=load('pharma_sales_json').filter(b=>b.date.startsWith(m));
+  const purch=load('pharma_purchases_json').filter(b=>b.date.startsWith(m));
+  const slabs=[5,12,18,28];
+  const sAgg={},pAgg={};
+  slabs.forEach(s=>{sAgg[s]=0;pAgg[s]=0});
+  sales.forEach(b=>b.items.forEach(i=>{sAgg[i.gst]=(sAgg[i.gst]||0)+i.qty*i.mrp}));
+  purch.forEach(b=>b.items.forEach(i=>{pAgg[i.gst]=(pAgg[i.gst]||0)+i.qty*i.rate}));
+  const tb=document.querySelector('#gstTable tbody');tb.innerHTML='';
+  let netPay=0,sTot=0,pTot=0;
+  slabs.forEach(s=>{
+    const sv=sAgg[s]||0,pv=pAgg[s]||0,dv=(sv-pv)*s/100;
+    sTot+=sv;pTot+=pv;netPay+=dv;
+    tb.innerHTML+=`<tr><td>${s}%</td><td>${sv.toFixed(2)}</td><td>${pv.toFixed(2)}</td><td>${dv.toFixed(2)}</td></tr>`;
+  });
+  document.getElementById('netPay').textContent=netPay.toFixed(2);
+  document.getElementById('saleTot').textContent=sTot.toFixed(2);
+  document.getElementById('purchTot').textContent=pTot.toFixed(2);
+  document.getElementById('gstTot').textContent=netPay.toFixed(2);
+}
+function exportCSV(){
+  const rows=[["GST Slab","Sales","Purchases","Net Diff"]];
+  document.querySelectorAll('#gstTable tbody tr').forEach(r=>{
+    rows.push(Array.from(r.children).map(td=>td.innerText));
+  });
+  let csv=rows.map(r=>r.join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="gst_report.csv";a.click();
+}
+calc();
+<!-- scanner + qr engines (you already have these files) -->
+<script src="/scripts/qrcode.min.js?v=1.1"></script>
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<!-- universal glue: binds buttons + PID QR everywhere -->
+<script src="/scripts/app-wiring.js?v=1.0"></script><script src="/scripts/seed-and-diagnostics.js?v=1.2"></script>
+</body></html>

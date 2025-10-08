@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OPD Live · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+
+<!-- Dexie + DB helpers -->
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="./scripts/db.js"></script>
+
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8; --teal:#C8F1EC; --pink:#F7C1D9;
+  --card:#ffffff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px}
+.header .logo{height:40px}
+
+/* v8.1 banner — make sure nothing overlays it */
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD; z-index:0}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.input,textarea,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+textarea{min-height:90px;resize:vertical}
+.label{font-size:12px;color:var(--muted)}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.btn.warn{background:#111827;color:#fff;border-color:#111827}
+.badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:11px}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:#475569;margin:18px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.kpi{background:var(--mint);border:1px solid #e2e8f0;border-radius:12px;padding:10px}
+.kpi h4{margin:0 0 6px}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+
+/* safe alert that never overlays the banner */
+.alert{margin-top:8px;padding:8px 10px;border-radius:8px;background:#dcfce7;color:#065f46;display:none;position:static}
+.alert.err{background:#fee2e2;color:#b91c1c}
+
+.pill{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;font-size:12px;margin:2px 6px 0 0;cursor:pointer}
+.pill.info{background:var(--teal)}
+.pill.warn{background:#FFE8D9}
+.right{display:flex;gap:8px;justify-content:flex-end}
+.small{font-size:12px}
+.price{width:90px}
+.total{font-weight:800;text-align:right}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div style="font-weight:700;font-size:18px">OPD · Live</div>
+        <div class="label">Select from today’s active queue · BMI/BSA auto · Rx & Lab queue</div>
+      </div>
+    </div>
+    <div class="row">
+      <a class="btn" href="./index.html">Home</a>
+      <a class="btn" href="./bookings.html">Bookings</a>
+      <a class="btn" href="./opd-records.html">OPD Records</a>
+    </div>
+  </div>
+
+  <!-- Banner (v8.1) -->
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <!-- Active queue picker (ONLY queued / waiting) -->
+  <div class="card" style="background:var(--mint)">
+    <div class="row" style="align-items:end">
+      <div style="flex:2 1 420px">
+        <label class="label">Today’s Active Patients (queued / waiting)</label>
+        <select id="todayList" class="input">
+          <option value="">— Select patient to load —</option>
+        </select>
+      </div>
+      <div style="flex:0 0 160px"><button class="btn" id="btnLoadSel">Load Selected</button></div>
+
+      <div style="flex:0 0 200px">
+        <label class="label">Find by PID (optional)</label>
+        <input id="findPID" class="input" placeholder="P00042">
+      </div>
+      <div style="flex:0 0 200px">
+        <label class="label">or Phone</label>
+        <input id="findPhone" class="input" maxlength="10" placeholder="10-digit"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+      </div>
+      <button class="btn" id="btnFind">Load</button>
+    </div>
+    <div id="msg" class="alert"></div>
+  </div>
+
+  <!-- Patient Snapshot -->
+  <div class="card" style="background:var(--lav)">
+    <h3>Patient</h3>
+    <div class="grid3">
+      <div><label class="label">PID</label><input id="pid" class="input" readonly></div>
+      <div><label class="label">Name</label><input id="name" class="input" readonly></div>
+      <div><label class="label">Contact</label><input id="phone" class="input" readonly></div>
+    </div>
+    <div class="grid3" style="margin-top:8px">
+      <div><label class="label">Age</label><input id="age" class="input" readonly></div>
+      <div><label class="label">Gender</label><input id="gender" class="input" readonly></div>
+      <div><label class="label">Reason</label><input id="reason" class="input" readonly></div>
+    </div>
+    <div class="grid2" style="margin-top:8px">
+      <div><label class="label">Address</label><input id="address" class="input" readonly></div>
+      <div class="grid2" style="gap:10px">
+        <div><label class="label">City</label><input id="city" class="input" readonly></div>
+        <div><label class="label">PIN</label><input id="pin" class="input" readonly></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vitals -->
+  <div class="card" style="background:var(--peach)">
+    <h3>Vitals</h3>
+    <div class="grid3">
+      <div><label class="label">Height (cm)</label><input id="height" class="input" type="number" step="0.1"></div>
+      <div><label class="label">Weight (kg)</label><input id="weight" class="input" type="number" step="0.1"></div>
+      <div><label class="label">Temp (°C)</label><input id="temp" class="input" type="number" step="0.1"></div>
+    </div>
+    <div class="grid3" style="margin-top:8px">
+      <div class="kpi"><h4>BMI</h4><div><b id="bmi">—</b> <span class="label" id="bmiNote"></span></div></div>
+      <div class="kpi"><h4>BSA (m²)</h4><div><b id="bsa">—</b> <span class="label">Mosteller</span></div></div>
+      <div class="kpi"><h4>Pulse / SPO₂</h4>
+        <div class="grid2" style="margin-top:6px">
+          <input id="pulse" class="input" type="number" placeholder="Pulse"/>
+          <input id="spo2" class="input" type="number" placeholder="SPO₂ %"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visit Timeline -->
+  <div class="card">
+    <h3>Visit Timeline</h3>
+    <div class="grid2">
+      <div>
+        <label class="label">Last Visit (auto)</label>
+        <div id="lastVisit" class="small">—</div>
+      </div>
+      <div>
+        <label class="label">Next Visit Date (optional)</label>
+        <input id="nextVisit" type="date" class="input">
+      </div>
+    </div>
+  </div>
+
+  <!-- OPD Notes -->
+  <div class="card" style="background:#EAF6FF">
+    <h3>OPD Notes</h3>
+    <div class="small" style="margin-bottom:6px">Quick complaints:
+      <span class="pill" data-cc="Fever">Fever</span>
+      <span class="pill" data-cc="Cold / Cough">Cold / Cough</span>
+      <span class="pill" data-cc="Vomiting">Vomiting</span>
+      <span class="pill" data-cc="Diarrhea">Diarrhea</span>
+      <span class="pill" data-cc="Abdominal pain">Abdominal pain</span>
+      <span class="pill" data-cc="Rash">Rash</span>
+      <span class="pill" data-cc="Headache">Headache</span>
+      <span class="pill" data-cc="Sore throat">Sore throat</span>
+    </div>
+    <div class="grid2">
+      <div>
+        <label class="label">Chief Complaints</label>
+        <input id="cc" class="input" list="ccList" placeholder="type or click a pill above">
+        <datalist id="ccList">
+          <option>Fever</option><option>Cold / Cough</option><option>Vomiting</option>
+          <option>Diarrhea</option><option>Abdominal pain</option><option>Rash</option>
+          <option>Headache</option><option>Sore throat</option><option>Ear pain</option>
+          <option>Breathlessness</option>
+        </datalist>
+      </div>
+      <div>
+        <label class="label">Examination</label>
+        <textarea id="exam"></textarea>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div>
+        <label class="label">Diagnosis</label>
+        <textarea id="dx"></textarea>
+      </div>
+      <div>
+        <label class="label">Plan / Advice</label>
+        <textarea id="plan"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rx Builder -->
+  <div class="card" style="background:#FFF0F6">
+    <h3>Prescription (Rx)</h3>
+    <div class="small" style="margin-bottom:6px">Inventory suggestions:
+      <span id="invPills"></span>
+    </div>
+    <div class="row" style="align-items:end">
+      <div style="flex:2 1 280px">
+        <label class="label">Medicine</label>
+        <input id="rxName" class="input" placeholder="Start typing..." list="drugList">
+        <datalist id="drugList"></datalist>
+      </div>
+      <div style="flex:1 0 110px"><label class="label">Dose</label><input id="rxDose" class="input" placeholder="5 ml"/></div>
+      <div style="flex:1 0 110px"><label class="label">Freq</label><input id="rxFreq" class="input" placeholder="TID"/></div>
+      <div style="flex:1 0 110px"><label class="label">Days</label><input id="rxDays" class="input" type="number" value="3"/></div>
+      <div style="flex:1 0 110px"><label class="label">Qty</label><input id="rxQty" class="input" type="number" value="1"/></div>
+      <button class="btn" id="btnAddRx">Add</button>
+    </div>
+    <table class="table" style="margin-top:10px" id="rxTable">
+      <thead><tr><th>#</th><th>Medicine</th><th>Dose</th><th>Freq</th><th>Days</th><th>Qty</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="right" style="margin-top:8px">
+      <button class="btn" id="btnRxClear">Clear Rx</button>
+      <button class="btn primary" id="btnSendPharmacy">Send to Pharmacy</button>
+    </div>
+  </div>
+
+  <!-- Lab Orders -->
+  <div class="card" style="background:#F2FFE9">
+    <h3>Lab Orders</h3>
+    <div class="small" style="margin-bottom:6px">Popular tests:
+      <span id="labPills"></span>
+    </div>
+    <div class="row" style="align-items:end">
+      <div style="flex:2 1 360px">
+        <label class="label">Test name</label>
+        <input id="labTest" class="input" placeholder="CBC / CRP / NS1..." list="labList">
+        <datalist id="labList"></datalist>
+      </div>
+      <div style="flex:0 0 120px">
+        <label class="label">Price</label>
+        <input id="labPrice" class="input price" type="number" min="0" step="1" placeholder="₹">
+      </div>
+      <div style="flex:1 0 160px"><label class="label">Notes</label><input id="labNote" class="input" placeholder="Fasting / Urgent"/></div>
+      <button class="btn" id="btnAddLab">Add</button>
+    </div>
+    <table class="table" style="margin-top:10px" id="labTable">
+      <thead><tr><th>#</th><th>Test</th><th>Price</th><th>Notes</th><th></th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="2" class="total">Total</td><td id="labTotal" class="total">0</td><td colspan="2"></td></tr></tfoot>
+    </table>
+    <div class="right" style="margin-top:8px">
+      <a class="btn" href="./lab.html">Open Lab Hub</a>
+      <button class="btn warn" id="btnSendLab">Send to Lab</button>
+    </div>
+  </div>
+
+  <!-- Save / Print -->
+  <div class="card">
+    <div class="right">
+      <button class="btn" id="btnPrint">Print OPD</button>
+      <button class="btn primary" id="btnSave">Save OPD</button>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const msg = (t, ok=true)=>{ const el=$("#msg"); el.textContent=t; el.className="alert"+(ok?"":" err"); el.style.display="block"; setTimeout(()=>el.style.display="none",2000); };
+
+/* BMI/BSA */
+function cmkgToBMI(cm,kg){ cm=+cm||0; kg=+kg||0; if(cm<=0||kg<=0) return null; const m=cm/100; return kg/(m*m); }
+function cmkgToBSA(cm,kg){ cm=+cm||0; kg=+kg||0; if(cm<=0||kg<=0) return null; return Math.sqrt((cm*kg)/3600); }
+function bmiNote(v){ if(v==null) return ""; if(v<18.5) return "(Underweight)"; if(v<25) return "(Normal)"; if(v<30) return "(Overweight)"; return "(Obese)"; }
+function wireVitals(){
+  const upd=()=>{ const bmi=cmkgToBMI($('#height').value,$('#weight').value); const bsa=cmkgToBSA($('#height').value,$('#weight').value);
+    $('#bmi').textContent = bmi? bmi.toFixed(1) : '—'; $('#bmiNote').textContent = bmi? bmiNote(bmi) : ''; $('#bsa').textContent = bsa? bsa.toFixed(2) : '—'; };
+  ['height','weight'].forEach(id=>$('#'+id).addEventListener('input',upd)); upd();
+}
+
+/* Age/Vax */
+function parseAgeToMonths(ageStr){ if(!ageStr) return null; const y=(ageStr.match(/(\d+)\s*y/i)||[])[1]||0; const m=(ageStr.match(/(\d+)\s*m/i)||[])[1]||0; return (+y)*12+(+m); }
+function dueVaccines(ageM){ if(ageM==null) return ["—"];
+  const plan=[{at:0,items:["BCG","OPV-0","HepB-0"]},{at:6,items:["DTaP-1","IPV-1","HepB-1","Hib-1","PCV-1","Rotavirus-1"]},{at:10,items:["DTaP-2","IPV-2","Hib-2","PCV-2","Rotavirus-2"]},{at:14,items:["DTaP-3","IPV-3","Hib-3","PCV-3"]},{at:9,items:["MR/Measles-1"]},{at:12,items:["HepA-1","Typhoid Conjugate"]},{at:15,items:["MMR-2","Varicella-1","PCV Booster"]},{at:18,items:["DTaP Booster-1","IPV Booster-1","Hib Booster"]},{at:48,items:["DTaP Booster-2","MMR-3","Varicella-2"]},{at:60,items:["Typhoid Booster","DT Booster"]},];
+  const s=[...plan].sort((a,b)=>a.at-b.at); let i=s.findIndex(p=>ageM<=p.at); if(i<0)i=s.length-1; return s[i].items; }
+
+/* Dexie */
+async function dexieOpen(){ const db=new Dexie('clinicdb'); db.version(1).stores({patients:'pid,patientName,contact,dob',bookings:'++id,date,ts,pid,token,status',opd:'++id,ts,pid,date'}); await db.open(); return db; }
+
+/* Bookings API */
+const ACTIVE = new Set(['queued','waiting']);
+async function listActiveToday(){
+  const today = new Date().toISOString().slice(0,10);
+  if(window.DB?.listBookingsToday){
+    const rows = (await DB.listBookingsToday())||[];
+    return rows.filter(r=> (r.date||'')===today && ACTIVE.has((r.status||'').toLowerCase()));
+  }
+  const db=await dexieOpen(); const rows=await db.table('bookings').where('date').equals(today).toArray(); db.close();
+  return rows.filter(r=>ACTIVE.has((r.status||'').toLowerCase()));
+}
+async function getPatient(pid){
+  if(window.DB?.findPatientByPID) return await DB.findPatientByPID(pid);
+  const db=await dexieOpen(); const p=await db.table('patients').get(pid) || await db.table('patients').where('pid').equals(pid).first(); db.close();
+  return p||null;
+}
+
+/* Dropdown */
+let ACTIVE_CACHE=[];
+async function populateDropdown(){
+  const list = await listActiveToday();
+  // sort: token asc, then ts
+  list.sort((a,b)=> String(a.token||'').localeCompare(String(b.token||'')) || (a.ts||0)-(b.ts||0));
+  ACTIVE_CACHE = list.slice();
+  const sel = $('#todayList');
+  sel.innerHTML = `<option value="">— Select patient to load —</option>` +
+    list.map((r,ix)=>`<option value="${r.pid}|${r.token||''}|${ix}">#${r.token||'—'} · ${r.patientName||''} · ${r.pid}</option>`).join('');
+  msg(`${list.length} active patient(s) found`);
+}
+
+/* Fill form */
+function fillFromRecord(b,p){
+  $('#pid').value = b?.pid || p?.pid || '';
+  $('#name').value = b?.patientName || p?.patientName || '';
+  $('#phone').value = b?.contact || p?.contact || '';
+  $('#age').value = b?.age || p?.age || '';
+  $('#gender').value = b?.gender || p?.gender || '';
+  $('#reason').value = b?.reason || p?.reason || '';
+  $('#address').value = b?.address || p?.address || '';
+  $('#city').value = b?.city || p?.city || '';
+  $('#pin').value = b?.pin || p?.pin || '';
+
+  // vitals prefer booking; fallback patient; then leave blank
+  $('#height').value = b?.height ?? p?.height ?? '';
+  $('#weight').value = b?.weight ?? p?.weight ?? '';
+  $('#temp').value   = b?.temp   ?? p?.temp   ?? '';
+  $('#pulse').value  = b?.pulse  ?? p?.pulse  ?? '';
+  $('#spo2').value   = b?.spo2   ?? p?.spo2   ?? '';
+
+  // compute vitals KPI
+  wireVitals();
+
+  // age band / vaccines
+  const m = parseAgeToMonths($('#age').value);
+  $('#ageMonths').textContent = (m!=null)? m : '—';
+  $('#ageBand').textContent = (m==null)? '—' : (m<60? 'Child band' : 'Adult band');
+  const due = dueVaccines(m);
+  $('#vaxDue').innerHTML = due.map(v=>`<span class="pill">${v}</span>`).join(' ');
+
+  // last visit preview
+  if($('#pid').value) loadLastVisit($('#pid').value).then(t=>$('#lastVisit').innerHTML=t);
+}
+
+/* Last visit (best-effort) */
+async function loadLastVisit(pid){
+  try{
+    let list=[];
+    try{ const db=await dexieOpen(); list=await db.table('opd').where('pid').equals(pid).toArray(); db.close(); }catch{}
+    try{ const ls=JSON.parse(localStorage.getItem('opd_local_json')||'[]'); list=list.concat(ls.filter(r=>r.pid===pid)); }catch{}
+    list.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const latest=list[0]; if(!latest) return '—';
+    const when=new Date(latest.ts||Date.now()).toLocaleString();
+    const cc = latest?.notes?.cc || latest?.complaints || '';
+    const dx = latest?.notes?.dx || latest?.diagnosis || '';
+    return `<div><b>${when}</b></div><div>CC: ${cc||'-'}</div><div>Dx: ${dx||'-'}</div>`;
+  }catch{ return '—'; }
+}
+
+/* OPD state */
+let RX=[]; let LABS=[]; let _savedOnce=false; let _savedRecordId=null;
+
+/* Save OPD (NO auto-next) */
+async function saveOPD(){
+  const pid=$('#pid').value.trim();
+  if(!pid) { msg('No PID — load a patient from dropdown or search', false); throw new Error('nopid'); }
+  const h=$('#height').value, w=$('#weight').value, t=$('#temp').value;
+  if(!h || !w || !t){ if(!confirm('Vitals incomplete (H/W/T). Save anyway?')) throw new Error('vitalcancel'); }
+
+  // Try to find reference booking from cache by PID
+  const latest = ACTIVE_CACHE.find(r=>r.pid===pid) || null;
+
+  const record = {
+    ts: Date.now(), date: new Date().toISOString().slice(0,10),
+    pid, name: $('#name').value, phone: $('#phone').value,
+    age: $('#age').value, gender: $('#gender').value, reason: $('#reason').value,
+    vitals: { height:h, weight:w, temp:t, pulse:$('#pulse').value, spo2:$('#spo2').value, bmi:$('#bmi').textContent, bsa:$('#bsa').textContent },
+    notes: { cc: $('#cc').value, exam: $('#exam').value, dx: $('#dx').value, plan: $('#plan').value },
+    rx: RX.slice(), labs: LABS.slice(), refToken: latest?.token || null,
+    nextVisit: ($('#nextVisit').value||'')
+  };
+
+  let id=null;
+  try{
+    if (window.DB?.addOPD) { id = await DB.addOPD(record); }
+    else { const db=await dexieOpen(); id = await db.table('opd').add(record); db.close(); }
+  }catch(e){
+    // LS fallback
+    const key='opd_local_json';
+    const arr=JSON.parse(localStorage.getItem(key)||'[]'); id='LS'+record.ts;
+    arr.push({...record,id}); localStorage.setItem(key,JSON.stringify(arr));
+  }
+
+  // mark booking served if we had it
+  try{
+    if(latest){
+      if(window.DB?.setBookingStatus) await DB.setBookingStatus({pid, token: latest.token, status:'served'});
+      else{
+        const db=await dexieOpen(); const today=record.date;
+        const hits=await db.table('bookings').where('date').equals(today).toArray();
+        const row=hits.find(r=>r.pid===pid && r.token===latest.token);
+        if(row) await db.table('bookings').update(row.id,{status:'served'});
+        db.close();
+      }
+    }
+  }catch{}
+
+  _savedOnce=true; _savedRecordId=id;
+  msg('OPD saved');
+
+  // refresh dropdown so served patient disappears, but DO NOT clear current inputs
+  populateDropdown();
+}
+
+/* Print OPD */
+function printOPD(){
+  const win=window.open('','_blank');
+  const now = new Date().toLocaleString();
+  const rowsRx = RX.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.dose}</td><td>${r.freq}</td><td>${r.days}</td><td>${r.qty}</td></tr>`).join('');
+  const rowsLab = LABS.map((r,i)=>`<tr><td>${i+1}</td><td>${r.test}</td><td>${r.price||0}</td><td>${r.note||''}</td></tr>`).join('');
+  win.document.write(`
+    <html><body style="font:14px system-ui">
+      <h2>OPD Sheet — ${$('#name').value} (${ $('#pid').value })</h2>
+      <div>${now}</div><hr>
+      <div><b>Vitals:</b> H ${$('#height').value}cm, W ${$('#weight').value}kg, T ${$('#temp').value}°C, BMI ${$('#bmi').textContent}, BSA ${$('#bsa').textContent}</div>
+      <div><b>Next Visit:</b> ${$('#nextVisit').value||'-'}</div>
+      <h3>OPD Notes</h3>
+      <div><b>CC:</b> ${$('#cc').value}</div>
+      <div><b>Exam:</b> ${($('#exam').value||'').replace(/\n/g,'<br>')}</div>
+      <div><b>Dx:</b> ${($('#dx').value||'').replace(/\n/g,'<br>')}</div>
+      <div><b>Plan:</b> ${($('#plan').value||'').replace(/\n/g,'<br>')}</div>
+      <h3>Rx</h3>
+      <table border="1" cellspacing="0" cellpadding="4"><tr><th>#</th><th>Medicine</th><th>Dose</th><th>Freq</th><th>Days</th><th>Qty</th></tr>${rowsRx||''}</table>
+      <h3>Lab</h3>
+      <table border="1" cellspacing="0" cellpadding="4"><tr><th>#</th><th>Test</th><th>Price</th><th>Notes</th></tr>${rowsLab||''}</table>
+    </body></html>
+  `);
+  win.document.close(); win.print();
+}
+
+/* Rx helpers */
+function renderRx(){ const tb=$("#rxTable tbody"); tb.innerHTML=''; RX.forEach((r,i)=>{tb.innerHTML += `<tr>
+  <td>${i+1}</td><td>${r.name}</td><td>${r.dose}</td><td>${r.freq}</td><td>${r.days}</td><td>${r.qty}</td>
+  <td><button class="btn" onclick="delRx(${i})">×</button></td></tr>`;}); }
+function addRx(){
+  const it = { name: $('#rxName').value.trim(), dose: $('#rxDose').value.trim(), freq: $('#rxFreq').value.trim(), days:+($('#rxDays').value||0), qty:+($('#rxQty').value||0) };
+  if(!it.name) return msg('Enter medicine', false);
+  RX.push(it); renderRx(); ['rxName','rxDose','rxFreq','rxDays','rxQty'].forEach(id=>$('#'+id).value=''); $('#rxDays').value=3; $('#rxQty').value=1;
+}
+function delRx(i){ RX.splice(i,1); renderRx(); }
+function clearRx(){ RX=[]; renderRx(); }
+function loadInventorySuggestions(){
+  let STOCK=[]; try{STOCK=JSON.parse(localStorage.getItem('pharma_stock_json')||'[]')}catch{}
+  STOCK.sort((a,b)=> (b.qty||0)-(a.qty||0));
+  const names=[...new Set(STOCK.map(s=>s.name).filter(Boolean))].slice(0,18);
+  $('#invPills').innerHTML = names.map(n=>`<span class="pill" data-drug="${n}">${n}</span>`).join('') || '<span class="label">No inventory yet</span>';
+  $('#drugList').innerHTML = names.map(n=>`<option value="${n}">`).join('');
+  $('#invPills').addEventListener('click', e=>{ const n=e.target?.dataset?.drug; if(!n) return;
+    $('#rxName').value=n; const nm=n.toLowerCase(); $('#rxDose').value = nm.includes('syp')||nm.includes('syrup') ? '5 ml' : (nm.includes('tab')?'1 tab':''); $('#rxFreq').value='BID'; $('#rxDays').value=3; $('#rxQty').value= nm.includes('syp')?1:10;
+  });
+}
+
+/* Lab helpers */
+function renderLabs(){
+  const tb=$("#labTable tbody"); tb.innerHTML=''; let total=0;
+  LABS.forEach((r,i)=>{ total += (+r.price||0); tb.innerHTML += `<tr>
+    <td>${i+1}</td><td>${r.test}</td>
+    <td><input class="input price" type="number" min="0" step="1" value="${r.price||0}" oninput="editLabPrice(${i},this.value)"></td>
+    <td>${r.note||''}</td><td><button class="btn" onclick="delLab(${i})">×</button></td></tr>`;});
+  $('#labTotal').textContent = total.toFixed(0);
+}
+function editLabPrice(i,val){ LABS[i].price=+val||0; renderLabs(); }
+function addLab(){
+  const it = { test: $('#labTest').value.trim(), price:+($('#labPrice').value||0), note: $('#labNote').value.trim() };
+  if(!it.test) return msg('Enter test', false);
+  LABS.push(it); renderLabs(); ['labTest','labPrice','labNote'].forEach(id=>$('#'+id).value='');
+}
+function delLab(i){ LABS.splice(i,1); renderLabs(); }
+
+/* Ensure-saved gate (does NOT clear vitals) */
+async function ensureSavedBefore(actionName){
+  if(_savedOnce) return true;
+  try{ await saveOPD(); return true; }
+  catch(e){ const ok = confirm(`${actionName}: Save failed. Send anyway?`); return !!ok; }
+}
+function clearAfterToast(which){
+  msg(`${which} sent`);
+  if(which==='Pharmacy'){ RX=[]; renderRx(); }
+  if(which==='Lab'){ LABS=[]; renderLabs(); }
+}
+
+/* Queues */
+async function sendToPharmacy(){
+  if(!RX.length) return msg('Add medicines first', false);
+  const ok = await ensureSavedBefore('Send to Pharmacy'); if(!ok) return;
+  const order={ ts:Date.now(), pid:$('#pid').value, name:$('#name').value, phone:$('#phone').value, items:RX.slice() };
+  const key='pharma_rx_queue'; const arr=JSON.parse(localStorage.getItem(key)||'[]'); arr.push(order); localStorage.setItem(key, JSON.stringify(arr));
+  clearAfterToast('Pharmacy');
+}
+async function sendToLab(){
+  if(!LABS.length) return msg('Add lab tests first', false);
+  const ok = await ensureSavedBefore('Send to Lab'); if(!ok) return;
+  const order={ ts:Date.now(), pid:$('#pid').value, name:$('#name').value, phone:$('#phone').value, items:LABS.slice(), total:+$('#labTotal').textContent||0 };
+  const key='lab_orders_queue'; const arr=JSON.parse(localStorage.getItem(key)||'[]'); arr.push(order); localStorage.setItem(key, JSON.stringify(arr));
+  clearAfterToast('Lab');
+}
+
+/* Events */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // complaint quick-add
+  document.querySelectorAll('[data-cc]').forEach(el=>el.addEventListener('click', ()=>{ const v=$('#cc').value.trim(); const add=el.dataset.cc; $('#cc').value = v ? (v+', '+add) : add; }));
+
+  // dropdown population
+  populateDropdown();
+
+  // manual selection + load
+  $('#btnLoadSel').addEventListener('click', async ()=>{
+    const val=$('#todayList').value;
+    if(!val){ msg('Select a patient first', false); return; }
+    const [pid, token, idx] = val.split('|');
+    const booking = ACTIVE_CACHE[+idx] || ACTIVE_CACHE.find(r=>r.pid===pid && String(r.token||'')===String(token||'')) || null;
+    const patient = booking ? await getPatient(booking.pid) : (pid? await getPatient(pid): null);
+    if(!booking && !patient){ msg('Could not load selection', false); return; }
+    // DO NOT clear vitals unless switching patient
+    RX=[]; LABS=[]; renderRx(); renderLabs();
+    fillFromRecord(booking, patient); _savedOnce=false; _savedRecordId=null; msg('Loaded selection');
+  });
+
+  // optional search
+  $('#btnFind').addEventListener('click', async ()=>{
+    const pid=($('#findPID').value||'').trim().toUpperCase();
+    const phone=($('#findPhone').value||'').trim();
+    if(!pid && !phone){ msg('Enter PID or Phone', false); return; }
+    // try find active first, else any
+    const today = new Date().toISOString().slice(0,10);
+    let booking=null;
+    if(window.DB?.listBookingsToday){
+      const rows=(await DB.listBookingsToday())||[];
+      booking = rows.find(r=> (pid && r.pid===pid) || (phone && r.contact===phone)) || null;
+    }else{
+      const db=await dexieOpen(); const hits=await db.table('bookings').where('date').equals(today).toArray();
+      booking = hits.find(r=> (pid && r.pid===pid) || (phone && r.contact===phone)) || null; db.close();
+    }
+    const patient = booking ? await getPatient(booking.pid) : (pid? await getPatient(pid): null);
+    if(!booking && !patient){ msg('No match found', false); return; }
+    RX=[]; LABS=[]; renderRx(); renderLabs();
+    fillFromRecord(booking, patient); _savedOnce=false; _savedRecordId=null; msg('Loaded');
+  });
+
+  // Save & Print
+  $('#btnSave').addEventListener('click', async ()=>{ try{ await saveOPD(); }catch{} });
+  $('#btnPrint').addEventListener('click', ()=>printOPD());
+
+  // vitals compute
+  wireVitals();
+
+  // Rx
+  window.delRx = (i)=>{ RX.splice(i,1); renderRx(); };
+  $('#btnAddRx').addEventListener('click', addRx);
+  $('#btnRxClear').addEventListener('click', clearRx);
+  $('#btnSendPharmacy').addEventListener('click', sendToPharmacy);
+  loadInventorySuggestions();
+
+  // Labs
+  window.delLab = (i)=>{ LABS.splice(i,1); renderLabs(); };
+  window.editLabPrice = (i,val)=>{ LABS[i].price=+val||0; renderLabs(); };
+  $('#btnAddLab').addEventListener('click', addLab);
+  $('#btnSendLab').addEventListener('click', sendToLab);
+
+  // Lab suggestions
+  (function loadLabSuggestions(){
+    const seed=[{n:'CBP',p:300},{n:'CRP',p:400},{n:'TYPHOID IgM IgG',p:300},{n:'CUE',p:150},{n:'RBS',p:50},{n:'TSB',p:300},{n:'DENGUE IgM IgG',p:800},{n:'MALARIA FOR Pv Pf',p:800},{n:'T3,T4,TSH',p:500},{n:'URINE C/S AUTOMATED',p:1100},{n:'URINE C/S CONVENTION',p:700},{n:'LFT',p:250},{n:'CREATININE',p:150},{n:'HBA1C',p:550},{n:'LIPID PROFILE',p:550},{n:'SERUM ELECTROLYTES',p:100},{n:'BLOOD GROUPING',p:100}];
+    let cfg=[]; try{ cfg=JSON.parse(localStorage.getItem('lab_tests_json')||'[]'); }catch{}
+    const list=(Array.isArray(cfg)&&cfg.length)? cfg.map(x=>({n:x.name||x.n, p:+(x.price||x.p||0)})) : seed;
+    $('#labList').innerHTML = list.map(x=>`<option data-price="${x.p}" value="${x.n}">`).join('');
+    $('#labPills').innerHTML = list.slice(0,12).map(x=>`<span class="pill" data-test="${x.n}" data-price="${x.p}">${x.n}</span>`).join('');
+    const sync=(val)=>{ const opt=[...$('#labList').options].find(o=>o.value.toLowerCase()===val.toLowerCase()); $('#labPrice').value= opt? (opt.dataset.price||'') : ''; };
+    $('#labTest').addEventListener('change', e=>sync(e.target.value));
+    $('#labPills').addEventListener('click', e=>{ const t=e.target?.dataset?.test; if(!t) return; $('#labTest').value=t; $('#labPrice').value=e.target.dataset.price||''; });
+  })();
+});
+</script>
+
+<!-- External scripts (kept outside inline) -->
+<script src="./scripts/seed-and-diagnostics.js?v=1.3"></script>
+<script src="./scripts/app-hotfix.js?v=1.0"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Clinic PWA · Tests (Scanner + QR + Seed)</title>
+<link rel="stylesheet" href="/styles/styles.css?v=8.1"/>
+<style>
+:root{ --mint:#D6E5DD; --peach:#FFD9BF; --lav:#DED8F2; --teal:#C8F1EC; --pink:#F7C1D9; }
+body{margin:0;font-family:system-ui,Segoe UI,Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a}
+.wrap{max-width:1150px;margin:0 auto;padding:12px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px;background:var(--mint);border:1px solid #0001;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.06);}
+.header .logo{height:42px}
+.brand{font-weight:800;font-size:20px}
+.sub{font-size:13px;color:#64748b}
+
+/* --- Banner Fixed Height --- */
+.banner{
+  margin:10px 0;
+  border-radius:16px;
+  overflow:hidden;
+  background:var(--lav);
+  height:160px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.banner img{
+  width:100%;
+  max-width:900px;
+  height:auto;
+  transform:scale(0.75);
+  transform-origin:center;
+  display:block;
+  mix-blend-mode:multiply;
+  opacity:.96;
+}
+
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:14px}
+.card h3{margin:0 0 8px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+.btn.primary{background:#111827;color:#fff;border-color:#111827}
+.input{border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px}
+.box{border:1px dashed #cbd5e1;border-radius:12px;padding:10px;background:#fff}
+.footer{text-align:center;color:#64748b;font-size:13px;margin:18px 0 10px}
+.code128{width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="/assets/logo.png" alt="logo"/>
+      <div>
+        <div class="brand">Clinic PWA · Test Console</div>
+        <div class="sub">Seed + Diagnostics v1.2 · Scanner + QR · Labels</div>
+      </div>
+    </div>
+    <div class="row">
+      <a class="btn" href="/index.html">Dashboard</a>
+      <a class="btn" href="/bookings.html">Bookings</a>
+      <a class="btn" href="/opd.html">OPD</a>
+      <a class="btn" href="/pharmacy.html">Pharmacy</a>
+      <a class="btn" href="/tv.html">TV</a>
+    </div>
+  </div>
+
+  <div class="banner"><img src="/assets/banner.png" alt="Clinic Banner"/></div>
+
+  <div class="grid">
+    <!-- Scanner -->
+    <div class="card" style="background:var(--teal)">
+      <h3>Scanner (Camera) — Code128 / EAN / UPC / QR</h3>
+      <div>BarcodeDetector: <b id="bdSup">checking…</b></div>
+      <div>Engine: <b id="eng">—</b></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="btnOpenScan">Open Scanner</button>
+        <button class="btn" id="btnScanHook">Always-on Hook (log)</button>
+      </div>
+      <div class="box" style="margin-top:10px"><b>Last Scan</b><div id="scanOut">—</div></div>
+    </div>
+
+    <!-- QR -->
+    <div class="card" style="background:var(--peach)">
+      <h3>QR Code — Generate & Decode</h3>
+      <div class="row" style="align-items:flex-end">
+        <div style="flex:1;min-width:240px">
+          <label>Text / PID</label>
+          <input id="qrText" class="input" value="P25002 | DR. CHARAN CHILD CLINIC"/>
+        </div>
+        <div>
+          <label>Size</label>
+          <select id="qrSize" class="input"><option>128</option><option selected>192</option><option>256</option></select>
+        </div>
+        <button class="btn primary" id="btnMakeQR">Generate</button>
+      </div>
+      <div class="box" style="margin-top:10px">
+        <div id="qrPreview"></div>
+        <div class="row" style="margin-top:6px">
+          <button class="btn" id="btnPrintQR">Print</button>
+          <button class="btn" id="btnDLQR">Download PNG</button>
+        </div>
+      </div>
+      <div class="box" style="margin-top:10px">
+        <label>Decode from Image</label>
+        <input type="file" id="qrFile" accept="image/*" class="input"/>
+        <div id="qrDecodeOut" style="margin-top:6px">—</div>
+      </div>
+    </div>
+
+    <!-- Label -->
+    <div class="card" style="background:var(--pink)">
+      <h3>Pharmacy Label — Code128</h3>
+      <div class="row" style="align-items:flex-end">
+        <div style="flex:1;min-width:240px"><input id="lblCode" class="input" value="ACCUMONT-LC SYP|LD-9076B"/></div>
+        <button class="btn primary" id="btnMakeLabel">Render</button>
+        <button class="btn" id="btnPrintLabel">Print Label</button>
+      </div>
+      <div class="box" style="margin-top:10px">
+        <svg id="lblSvg" class="code128"></svg>
+        <div id="lblHuman" style="font-size:12px;color:#475569;margin-top:4px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<!-- seed + diagnostics -->
+<script src="/scripts/seed-and-diagnostics.js?v=1.2"></script>
+<!-- guaranteed local files -->
+<script src="/scripts/qrcode.min.js?v=1.0.1"></script>
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<!-- JsBarcode for label preview -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+<script>
+const $ = s => document.querySelector(s);
+let lastQRCanvas=null;
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  $('#bdSup').textContent = ('BarcodeDetector' in window) ? 'Yes' : 'No';
+  $('#eng').textContent = (window.BarcodeAPI ? 'Local (barcode.js / BD or Quagga2)' : '—');
+
+  // Scanner
+  function logScan(code){ $('#scanOut').textContent = code; }
+  $('#btnOpenScan').onclick = ()=>{ if(!window.BarcodeAPI){alert('Scanner not loaded'); return;} window.BarcodeAPI.open(code=>logScan(code)); };
+  $('#btnScanHook').onclick = ()=>{ if(!window.BarcodeAPI){alert('Scanner not loaded'); return;} window.BarcodeAPI.open(code=>{ console.log('Scanned:',code); logScan(code); }); };
+
+  // QR
+  function makeQR(){
+    if(!window.QRCode){ alert('QR library missing'); return; }
+    const txt=$('#qrText').value, size=parseInt($('#qrSize').value,10)||192;
+    const box=$('#qrPreview'); box.innerHTML=''; const div=document.createElement('div'); box.appendChild(div);
+    new QRCode(div,{text:txt,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+    lastQRCanvas=div.querySelector('canvas');
+  }
+  $('#btnMakeQR').onclick = makeQR;
+  $('#btnPrintQR').onclick = ()=>{ if(!lastQRCanvas) return alert('Generate a QR first'); const w=window.open('', '_blank'); w.document.write('<img src="'+lastQRCanvas.toDataURL('image/png')+'"/>'); w.document.close(); w.print(); };
+  $('#btnDLQR').onclick = ()=>{ if(!lastQRCanvas) return alert('Generate a QR first'); const a=document.createElement('a'); a.href=lastQRCanvas.toDataURL('image/png'); a.download='qr.png'; a.click(); };
+  $('#qrFile').addEventListener('change', async (e)=>{
+    const f=e.target.files?.[0]; if(!f) return; const out=$('#qrDecodeOut'); out.textContent='Decoding...';
+    try{
+      if('BarcodeDetector' in window){
+        const bd=new BarcodeDetector({formats:['qr_code']});
+        const bmp=await createImageBitmap(f);
+        const c=document.createElement('canvas'); c.width=bmp.width; c.height=bmp.height; c.getContext('2d').drawImage(bmp,0,0);
+        const res=await bd.detect(c); out.textContent=res?.[0]?.rawValue||'(no QR found)';
+      } else { out.textContent='Browser lacks BarcodeDetector QR'; }
+    }catch(err){ console.error(err); out.textContent='Decode failed'; }
+  });
+
+  // Label
+  function makeLabel(){ const code=$('#lblCode').value.trim(); if(!code) return; JsBarcode('#lblSvg', code, {format:'CODE128', displayValue:false, height:48, margin:0}); $('#lblHuman').textContent=code; }
+  $('#btnMakeLabel').onclick=makeLabel;
+  $('#btnPrintLabel').onclick=()=>{ makeLabel(); const svg=$('#lblSvg').outerHTML; const w=window.open('','_blank'); w.document.write('<html><body style="padding:10mm"><div style="width:62mm;height:28mm;border:1px dashed #ddd;padding:4mm">'+svg+'<div style="font:12px system-ui;text-align:center;margin-top:2mm">'+$('#lblHuman').textContent+'</div></div></body></html>'); w.document.close(); w.print(); };
+
+  // initial previews
+  setTimeout(()=>{ if (window.QRCode) makeQR(); makeLabel(); }, 200);
+});
+</script>
+</body>
+</html>

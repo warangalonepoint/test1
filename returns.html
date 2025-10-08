@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Returns · Pharmacy · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="./config.js"></script>
+<style>
+:root{--bg-gradient:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);--mint:#D6E5DD;--lav:#DED8F2;--peach:#FFE8D9;--pink:#FBD6E3;--teal:#C8F5E4;--card:#fff;--ink:#0f172a;--muted:#475569;--primary:#139a5b;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.08)}
+:root{--header-tint:#FBD6E3;--header-tint-rgba:251,214,227;--banner-tint:#C8F5E4;--banner-tint-rgba:200,245,228}
+*{box-sizing:border-box} body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);} a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(var(--header-tint-rgba),0.7);border:1px solid #0001;border-radius:12px;margin-top:10px;box-shadow:var(--shadow);}
+.header .logo{height:40px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.btn:hover{background:#f1f5f9}
+.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:var(--banner-tint)}
+.banner img{width:100%;transform:scale(.65);display:block;border-radius:var(--r);mix-blend-mode:multiply;opacity:.95}
+.banner::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(var(--banner-tint-rgba),.3),rgba(var(--banner-tint-rgba),.3))}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0 14px}
+.alert{margin-top:8px;padding:8px 10px;border-radius:8px;background:#fee2e2;color:#b91c1c;display:none}
+.alert.ok{background:#dcfce7;color:#065f46}
+@media print{ body{background:#fff;color:#000} .wrap,.header,.banner,.footer{display:none} #printArea{display:block;padding:6mm} .a5{width:148mm;height:210mm;margin:auto} .slip{font:13px/1.45 system-ui;color:#000} .slip h2{margin:0 0 4px} .slip table{width:100%;border-collapse:collapse} .slip th,.slip td{border:1px solid #000;padding:4px} }
+#printArea{display:none}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <img class="logo" src="./assets/logo.png" alt="logo">
+    <div><div style="font-weight:700;font-size:18px">Returns</div><div style="font-size:13px;color:var(--muted)">Sales ↔ Purchase · A5 slip · <b>barcode-ready</b></div></div>
+    <div class="row" style="gap:6px"><a class="btn" href="./pharmacy.html">DRUVHI MEDICALS</a><a class="btn" href="./index.html">Home</a></div>
+  </div>
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <div class="card" style="background:var(--pink)">
+    <div class="row">
+      <div style="flex:0 0 220px">
+        <label>Return Type</label>
+        <select id="rtype" class="input" onchange="loadInvoices()">
+          <option value="sales">Sales Return (from customer)</option>
+          <option value="purchase">Purchase Return (to distributor)</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <label>Select Invoice</label>
+        <input id="invoice" class="input" list="invlist" placeholder="Start typing invoice id..." oninput="loadBill()">
+        <datalist id="invlist"></datalist>
+      </div>
+      <div style="flex:0 0 240px;align-self:end" class="row">
+        <button class="btn" onclick="clearForm()">Clear</button>
+        <!-- Scanner triggers line-level return increments via hidden sink -->
+        <input id="returnScan" class="hide" />
+        <button class="btn" id="scanReturn" data-scan data-scan-target="#returnScan">Scan</button>
+      </div>
+    </div>
+    <div id="msg" class="alert"></div>
+  </div>
+
+  <div class="card" style="background:var(--teal)">
+    <div class="row">
+      <div style="flex:1"><label id="partyLabel">Buyer</label><input id="party" class="input" readonly></div>
+      <div style="flex:1"><label>Invoice Date</label><input id="bdate" class="input" readonly></div>
+      <div style="flex:0 0 220px"><label>Original Total</label><input id="btotal" class="input" readonly></div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--lav)">
+    <h3>Return Items</h3>
+    <table class="table" id="retTable">
+      <thead><tr><th>#</th><th>Product</th><th>Batch</th><th>EXP</th><th>Sold/Received Qty</th><th>Return Qty</th><th>MRP/Rate</th><th>GST %</th><th>Amount</th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="8" style="text-align:right;font-weight:700">Return Total</td><td id="retTotal">0.00</td></tr></tfoot>
+    </table>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px">
+      <button class="btn" onclick="applyReturn()">Apply Return</button>
+      <button class="btn primary" onclick="applyReturn(true)">Apply & Print Slip</button>
+    </div>
+  </div>
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<div id="printArea"></div>
+
+<!-- ===== App Logic ===== -->
+<script>
+let STOCK=[], SALES=[], PURCH=[], CURRENT=null, RTYPE='sales', RET=[];
+
+function loadAll(){
+  try{STOCK = JSON.parse(localStorage.getItem('pharma_stock_json')||'[]')||[]}catch{STOCK=[]}
+  try{SALES = JSON.parse(localStorage.getItem('pharma_sales_json')||'[]')||[]}catch{SALES=[]}
+  try{PURCH = JSON.parse(localStorage.getItem('pharma_purchases_json')||'[]')||[]}catch{PURCH=[]}
+}
+loadAll();
+
+function loadInvoices(){
+  RTYPE=document.getElementById('rtype').value;
+  document.getElementById('partyLabel').textContent = RTYPE==='sales'?'Buyer':'Distributor';
+  const dl=document.getElementById('invlist'); dl.innerHTML='';
+  (RTYPE==='sales'?SALES:PURCH).slice().reverse().forEach(b=>{
+    const opt=document.createElement('option');
+    opt.value=(b.id||b.inv||'INV?')+' — '+(b.buyer||b.vendor||'');
+    dl.appendChild(opt);
+  });
+  document.getElementById('invoice').value=''; CURRENT=null; RET=[]; renderTable();
+  document.getElementById('party').value=''; document.getElementById('bdate').value=''; document.getElementById('btotal').value='';
+}
+function parseInvoiceInput(){ const raw=document.getElementById('invoice').value; return raw.split('—')[0].trim(); }
+
+function loadBill(){
+  const id=parseInvoiceInput(); if(!id) return;
+  const pool = RTYPE==='sales'?SALES:PURCH;
+  const b=pool.find(x=>(x.id||x.inv||'').toString()===id);
+  if(!b){ toast('Invoice not found'); return; }
+  CURRENT={ id:(b.id||b.inv), party:(b.buyer||b.vendor||''), date:(b.date||b.pdate||new Date().toISOString()), items:b.items||[], total:b.total||0 };
+  document.getElementById('party').value=CURRENT.party;
+  document.getElementById('bdate').value=new Date(CURRENT.date).toLocaleString();
+  document.getElementById('btotal').value=(CURRENT.total||0).toFixed(2);
+  RET=CURRENT.items.map(it=>({ name:it.name,batch:it.batch,exp:it.exp,gst:it.gst||0, price:+(RTYPE==='sales'?it.mrp:it.rate)||0, oqty:(it.qty||0), rqty:0 }));
+  renderTable();
+}
+
+function renderTable(){
+  const tb=document.querySelector('#retTable tbody'); tb.innerHTML=''; let total=0;
+  RET.forEach((r,i)=>{ const amt=(r.rqty||0)*(r.price||0); total+=amt;
+    tb.innerHTML += `<tr><td>${i+1}</td><td>${r.name}</td><td>${r.batch||''}</td><td>${r.exp||''}</td><td>${r.oqty}</td>
+      <td><input type="number" min="0" max="${r.oqty}" value="${r.rqty||0}" style="width:90px" oninput="setRQty(${i},this.value)"></td>
+      <td>${(r.price||0).toFixed(2)}</td><td>${r.gst||0}%</td><td>${amt.toFixed(2)}</td></tr>`;
+  });
+  document.getElementById('retTotal').textContent=total.toFixed(2);
+}
+function setRQty(idx,val){ val=Math.max(0,Math.min(+val||0,RET[idx].oqty)); RET[idx].rqty=val; renderTable(); }
+
+function scanReturnLine(code){
+  if(!CURRENT){ toast('Select an invoice first'); return; }
+  // Match a line by barcode (stored barcode or fallback NAME|BATCH)
+  const idx = RET.findIndex(r=>{
+    const codeA = `${r.name}|${r.batch}`;
+    const s = STOCK.find(x=>eqi(x.name,r.name) && x.batch===r.batch);
+    const codeB = s?.barcode||'';
+    return code===codeA || (codeB && code===codeB);
+  });
+  if(idx<0){ toast('No matching line in this invoice'); return; }
+  RET[idx].rqty = Math.min(RET[idx].oqty, (RET[idx].rqty||0)+1);
+  renderTable();
+}
+
+function applyReturn(printSlip=false){
+  if(!CURRENT){ toast('Pick an invoice first'); return; }
+  const lines=RET.filter(r=>r.rqty>0); if(!lines.length){ toast('Set return quantities'); return; }
+
+  if(RTYPE==='sales'){
+    // Customer returns → add back to stock
+    lines.forEach(r=>{
+      const i=STOCK.findIndex(s=>eqi(s.name,r.name)&&s.batch===r.batch);
+      if(i>=0){STOCK[i].qty+=r.rqty;}
+      else {STOCK.push({name:r.name,pack:'',batch:r.batch,exp:r.exp,qty:r.rqty,mrp:r.price,rate:r.price, barcode:`${r.name}|${r.batch}`});}
+    });
+  }else{
+    // Return to distributor → subtract stock
+    for(const r of lines){
+      const i=STOCK.findIndex(s=>eqi(s.name,r.name)&&s.batch===r.batch);
+      if(i<0) continue;
+      STOCK[i].qty=Math.max(0,(STOCK[i].qty||0)-r.rqty);
+    }
+  }
+  localStorage.setItem('pharma_stock_json',JSON.stringify(STOCK));
+  window.dispatchEvent(new StorageEvent('storage',{key:'pharma_stock_json'}));
+
+  const rec={ rtype:RTYPE, ref:CURRENT.id, party:CURRENT.party, date:new Date().toISOString(), total:+document.getElementById('retTotal').textContent||0, items:lines.map(r=>({name:r.name,batch:r.batch,exp:r.exp,qty:r.rqty,price:r.price,gst:r.gst})) };
+  let ARR=[]; try{ARR=JSON.parse(localStorage.getItem('pharma_returns_json')||'[]')}catch{} ARR.push(rec);
+  localStorage.setItem('pharma_returns_json',JSON.stringify(ARR));
+
+  toast('Return applied', true); if(printSlip) printA5(rec);
+  RET.forEach(r=>r.rqty=0); renderTable();
+}
+
+function printA5(rec){
+  const title=rec.rtype==='sales'?'SALES RETURN (CREDIT SLIP)':'PURCHASE RETURN (DEBIT SLIP)';
+  const html=`<div class="a5 slip"><h2>DRUVHI MEDICALS</h2><div>Saraswathi Nagar, Gopalpur, Hanamkonda · Ph: 08340840340</div><hr>
+    <div><b>${title}</b></div><div><b>Ref Invoice:</b> ${rec.ref} &nbsp; | &nbsp; <b>Date:</b> ${new Date(rec.date).toLocaleString()}</div><div><b>${rec.rtype==='sales'?'Customer':'Distributor'}:</b> ${rec.party||'-'}</div>
+    <table style="margin-top:6px"><thead><tr><th>#</th><th>Product</th><th>Batch</th><th>EXP</th><th>Qty</th><th>Price</th><th>GST%</th><th>Amount</th></tr></thead><tbody>
+    ${rec.items.map((it,i)=>`<tr><td>${i+1}</td><td>${it.name}</td><td>${it.batch||''}</td><td>${it.exp||''}</td><td>${it.qty}</td><td>${(+it.price||0).toFixed(2)}</td><td>${it.gst||0}</td><td>${(it.qty*(+it.price||0)).toFixed(2)}</td></tr>`).join('')}
+    </tbody></table><div style="text-align:right;margin-top:6px"><b>Total:</b> ₹${(+rec.total||0).toFixed(2)}</div>
+    <hr><div style="display:flex;justify-content:space-between;margin-top:10px"><div>Receiver Sign</div><div>Authorized Sign</div></div>
+    <div style="margin-top:8px;text-align:center;font-size:11px">Powered by Onestop AI Services · © 2025 · All Rights Reserved</div></div>`;
+  document.getElementById('printArea').innerHTML=html; window.print(); document.getElementById('printArea').innerHTML='';
+}
+
+function clearForm(){
+  document.getElementById('invoice').value='';
+  document.getElementById('party').value='';
+  document.getElementById('bdate').value='';
+  document.getElementById('btotal').value='';
+  CURRENT=null; RET=[]; renderTable();
+}
+function toast(msg,ok=false){
+  const el=document.getElementById('msg');
+  el.textContent=msg; el.className='alert '+(ok?'ok':''); el.style.display='block';
+  setTimeout(()=>el.style.display='none',1800);
+}
+function eqi(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase();}
+
+/* Scanner callback: any scan routed to hidden sink will trigger line increment */
+window.onScanFilled = ({input, value}) => {
+  if (input && input.id === 'returnScan' && value) {
+    scanReturnLine(value);
+    // clear sink so next scan fires cleanly
+    input.value='';
+  }
+};
+
+/* boot */
+loadInvoices();
+</script>
+
+<!-- ===== Engines + Wiring (correct order, outside inline JS) ===== -->
+<script src="/scripts/qrcode.min.js?v=1.1"></script>
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<script src="/scripts/app-wiring.js?v=1.1"></script>
+<script src="/scripts/seed-and-diagnostics.js?v=1.3"></script>
+</body>
+</html>

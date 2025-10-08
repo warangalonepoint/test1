@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Clinic PWA · Reports</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+
+<!-- Dexie & Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8; --teal:#C8F1EC; --gray:#E2E8F0;
+  --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+
+/* Header (matches dashboard) */
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-top:10px;border-radius:12px;background:#DED8F2B3;box-shadow:var(--shadow)}
+.header .logo{height:40px}
+.small{color:var(--muted);font-size:12px}
+
+.banner{margin:10px 0;border-radius:16px;overflow:hidden;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.60);transform-origin:center;opacity:.95;mix-blend-mode:multiply}
+
+/* Layout */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--card);border-radius:var(--r);padding:12px;box-shadow:var(--shadow)}
+.card.mint{background:var(--mint)}
+.card.lav{background:var(--lav)}
+.card.peach{background:var(--peach)}
+.card.teal{background:var(--teal)}
+.card.gray{background:var(--gray)}
+h3{margin:0 0 6px}
+
+/* KPI row */
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.kpi{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+.kpi .v{font-weight:800;font-size:20px}
+
+/* Filters */
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.input,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;background:#fff}
+.btn{border:1px solid #cbd5e1;background:#fff;border-radius:20px;padding:8px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;font-size:12px;cursor:pointer}
+.pill:hover{background:#f8fafc}
+
+/* Charts (50% compact) */
+.canvas-wrap{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:6px}
+canvas{display:block;width:100% !important}
+
+/* Tables */
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f8fafc}
+.thead-sticky{position:sticky;top:0}
+
+/* Footer */
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo" onerror="this.style.display='none'">
+      <div>
+        <div style="font-weight:800;font-size:18px">Reports</div>
+        <div class="small">Bookings · OPD · Sales</div>
+      </div>
+    </div>
+    <div class="row">
+      <a class="btn" href="./index.html">Home</a>
+      <button class="btn" id="btnCSV">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <!-- Filters -->
+  <div class="card mint">
+    <h3>Filters</h3>
+    <div class="row" style="align-items:end">
+      <div>
+        <label class="small">From</label><br>
+        <input id="from" type="date" class="input">
+      </div>
+      <div>
+        <label class="small">To</label><br>
+        <input id="to" type="date" class="input">
+      </div>
+      <div>
+        <label class="small">Type</label><br>
+        <select id="fltType" class="input">
+          <option value="">All</option>
+          <option value="CONSULT">Consult</option>
+          <option value="REVIEW">Review</option>
+          <option value="VACCINE">Vaccine</option>
+        </select>
+      </div>
+      <div>
+        <label class="small">Payment</label><br>
+        <select id="fltPay" class="input">
+          <option value="">All</option>
+          <option>Cash</option><option>UPI</option><option>Card</option><option>Wallet</option>
+        </select>
+      </div>
+      <button class="btn primary" id="apply">Apply</button>
+      <div class="row">
+        <span class="pill" data-preset="today">Today</span>
+        <span class="pill" data-preset="yesterday">Yesterday</span>
+        <span class="pill" data-preset="7">Last 7d</span>
+        <span class="pill" data-preset="30">Last 30d</span>
+        <span class="pill" data-preset="month">This Month</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="small">Bookings</div>
+      <div class="v" id="k_bookings">0</div>
+    </div>
+    <div class="kpi">
+      <div class="small">OPD Visits</div>
+      <div class="v" id="k_opd">0</div>
+    </div>
+    <div class="kpi">
+      <div class="small">Sales Bills</div>
+      <div class="v" id="k_sales">0</div>
+    </div>
+    <div class="kpi">
+      <div class="small">Net Sales (₹)</div>
+      <div class="v" id="k_amount">0</div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="grid">
+    <!-- Bookings trend -->
+    <div class="card lav">
+      <h3>Bookings (daily)</h3>
+      <div class="canvas-wrap">
+        <canvas id="cBookings" height="55"></canvas>
+      </div>
+    </div>
+
+    <!-- OPD trend -->
+    <div class="card peach">
+      <h3>OPD (daily)</h3>
+      <div class="canvas-wrap">
+        <canvas id="cOPD" height="55"></canvas>
+      </div>
+    </div>
+
+    <!-- Sales net trend -->
+    <div class="card teal">
+      <h3>Sales (Net ₹ daily)</h3>
+      <div class="canvas-wrap">
+        <canvas id="cSales" height="65"></canvas>
+      </div>
+    </div>
+
+    <!-- Payments mix -->
+    <div class="card gray">
+      <h3>Payment Mix</h3>
+      <div class="canvas-wrap">
+        <canvas id="cPayMix" height="65"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tables -->
+  <div class="grid" style="margin-top:8px">
+    <div class="card">
+      <h3>Recent Bookings</h3>
+      <table class="table" id="tblBookings">
+        <thead class="thead-sticky"><tr><th>Date</th><th>Token</th><th>PID</th><th>Name</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Recent OPD</h3>
+      <table class="table" id="tblOPD">
+        <thead class="thead-sticky"><tr><th>Date/Time</th><th>PID</th><th>Name</th><th>CC</th><th>Dx</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Recent Sales</h3>
+      <table class="table" id="tblSales">
+        <thead class="thead-sticky"><tr><th>Date/Time</th><th>Buyer</th><th>Items</th><th>Net (₹)</th><th>Pay</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong></div>
+</div>
+
+<script>
+/* ---------- Helpers ---------- */
+const $=s=>document.querySelector(s);
+const fmtDate=d=>new Date(d).toISOString().slice(0,10);
+const today=()=>fmtDate(new Date());
+function addDays(dt, n){ const d=new Date(dt); d.setDate(d.getDate()+n); return fmtDate(d); }
+
+function daterange(from, to){
+  const out=[]; let d=new Date(from); const end=new Date(to);
+  while(d<=end){ out.push(fmtDate(d)); d.setDate(d.getDate()+1); }
+  return out;
+}
+function parseLocalISO(ts){ try{ return new Date(ts); }catch{ return new Date(); }}
+
+/* ---------- Data sources ---------- */
+async function openDexie(){
+  const db=new Dexie('clinicdb');
+  // minimal stores (will ignore if already defined)
+  db.version(1).stores({
+    bookings:'++id,date,ts,pid,token,status,patientName,type,contact',
+    opd:'++id,ts,pid,date'
+  });
+  await db.open().catch(()=>{});
+  return db;
+}
+
+async function loadData(from, to, typeFilter='', payFilter=''){
+  const db=await openDexie().catch(()=>null);
+  const rangeDates= new Set(daterange(from,to));
+
+  // Bookings (from Dexie bookings table or empty)
+  let bookings=[];
+  if (db && db.tables.find(t=>t.name==='bookings')){
+    const rows = await db.table('bookings').where('date').between(from, to, true, true).toArray().catch(()=>[]);
+    bookings = rows.map(r=>({
+      date: r.date,
+      ts: r.ts||0,
+      token: r.token||'',
+      pid: r.pid||'',
+      name: r.patientName||r.name||'',
+      status: (r.status||'').toLowerCase(),
+      type: r.type||''
+    }));
+  }
+
+  // OPD (from Dexie opd + fallback localStorage)
+  let opd=[];
+  if (db && db.tables.find(t=>t.name==='opd')){
+    const rows = await db.table('opd').filter(x => rangeDates.has(x.date||fmtDate(x.ts||Date.now()))).toArray().catch(()=>[]);
+    opd = rows.map(r=>({
+      ts: r.ts||Date.now(),
+      date: r.date || fmtDate(r.ts||Date.now()),
+      pid: r.pid||'',
+      name: r.name||'',
+      cc: r?.notes?.cc || r.complaints || '',
+      dx: r?.notes?.dx || r.diagnosis || ''
+    }));
+  }
+  // OPD localStorage fallback
+  try{
+    const ls=JSON.parse(localStorage.getItem('opd_local_json')||'[]');
+    (ls||[]).forEach(r=>{
+      const d = r.date || fmtDate(r.ts||Date.now());
+      if(rangeDates.has(d)){
+        opd.push({
+          ts: r.ts||Date.now(), date:d, pid:r.pid||'', name:r.name||'',
+          cc: r?.notes?.cc || r.complaints || '', dx: r?.notes?.dx || r.diagnosis || ''
+        });
+      }
+    });
+  }catch{}
+
+  // Sales (localStorage pharma_sales_json)
+  let sales=[];
+  try{
+    const arr=JSON.parse(localStorage.getItem('pharma_sales_json')||'[]');
+    (arr||[]).forEach(b=>{
+      const d = (b.date||'').slice(0,10);
+      if(rangeDates.has(d)){
+        if(payFilter && (b.payMode||'')!==payFilter) return;
+        sales.push({
+          ts: b.date? Date.parse(b.date): Date.now(),
+          date: d,
+          buyer: b.buyer||'Walk-in',
+          items: Array.isArray(b.items)? b.items.length: 0,
+          total: +(b.total||0),
+          payMode: b.payMode||'',
+        });
+      }
+    });
+  }catch{}
+
+  // Optional type filter (bookings only)
+  if(typeFilter){
+    bookings = bookings.filter(b => (b.type||'').toUpperCase().includes(typeFilter.toUpperCase()));
+  }
+
+  if (db) db.close?.();
+
+  // sort recents
+  bookings.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  opd.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  sales.sort((a,b)=>(b.ts||0)-(a.ts||0));
+
+  return {bookings,opd,sales};
+}
+
+/* ---------- UI State ---------- */
+const charts={};
+function setK(id,val){ $(id).textContent = typeof val==='number' ? (val.toLocaleString()) : val; }
+function sum(arr,sel){ return arr.reduce((s,x)=>s+(+sel(x)||0),0); }
+
+/* ---------- Charts ---------- */
+function upsertChart(key, type, ctx, data, options){
+  if(charts[key]){ charts[key].data=data; charts[key].options=options||charts[key].options; charts[key].update(); return charts[key]; }
+  charts[key]= new Chart(ctx,{type,data,options});
+  return charts[key];
+}
+function buildLineData(labels, values, label){
+  return {
+    labels,
+    datasets:[{
+      label,
+      data: values,
+      tension:.3,
+      fill:true,
+      borderWidth:2
+    }]
+  };
+}
+function buildDoughnutData(labels, values){
+  return { labels, datasets:[{ data: values }] };
+}
+const baseOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{grid:{color:'#eef2f7'}}}};
+
+/* ---------- Tables ---------- */
+function renderTable(tbId, rows, renderRow){
+  const tb=$(tbId); tb.innerHTML='';
+  if(!rows.length){ tb.innerHTML=`<tr><td colspan="99" class="small" style="color:#64748b">No data</td></tr>`; return; }
+  rows.slice(0,30).forEach(r=> tb.insertAdjacentHTML('beforeend', renderRow(r)) );
+}
+
+/* ---------- CSV ---------- */
+function exportCSV(sections){
+  const parts=[];
+  sections.forEach(sec=>{
+    parts.push(sec.title);
+    parts.push(sec.header.join(','));
+    sec.rows.forEach(r=>parts.push(sec.toRow(r).map(v=>String(v).replaceAll('"','""')).map(v=>`"${v}"`).join(',')));
+    parts.push(''); // blank line
+  });
+  const blob=new Blob([parts.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='reports.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- Apply Filters ---------- */
+async function apply(){
+  const f=$('#from').value || today();
+  const t=$('#to').value   || today();
+  const type=$('#fltType').value||'';
+  const pay=$('#fltPay').value||'';
+  const {bookings,opd,sales} = await loadData(f,t,type,pay);
+
+  // KPIs
+  setK('#k_bookings', bookings.length);
+  setK('#k_opd', opd.length);
+  setK('#k_sales', sales.length);
+  setK('#k_amount', sum(sales,x=>x.total).toFixed(0));
+
+  // Trend labels (continuous days)
+  const days = daterange(f,t);
+
+  // Bookings per day
+  const mapB=Object.fromEntries(days.map(d=>[d,0]));
+  bookings.forEach(b=>{ mapB[b.date]=(mapB[b.date]||0)+1; });
+  upsertChart(
+    'book',
+    'line',
+    $('#cBookings'),
+    buildLineData(days, days.map(d=>mapB[d]||0), 'Bookings'),
+    baseOpts
+  );
+
+  // OPD per day
+  const mapO=Object.fromEntries(days.map(d=>[d,0]));
+  opd.forEach(o=>{ mapO[o.date]=(mapO[o.date]||0)+1; });
+  upsertChart(
+    'opd',
+    'line',
+    $('#cOPD'),
+    buildLineData(days, days.map(d=>mapO[d]||0), 'OPD'),
+    baseOpts
+  );
+
+  // Sales per day (sum totals)
+  const mapS=Object.fromEntries(days.map(d=>[d,0]));
+  sales.forEach(s=>{ mapS[s.date]=(mapS[s.date]||0)+(+s.total||0); });
+  upsertChart(
+    'sales',
+    'line',
+    $('#cSales'),
+    buildLineData(days, days.map(d=>mapS[d]||0), 'Sales'),
+    baseOpts
+  );
+
+  // Payment mix
+  const payKeys=['Cash','UPI','Card','Wallet'];
+  const payVals=payKeys.map(k=> sales.filter(s=>s.payMode===k).length );
+  upsertChart(
+    'pay',
+    'doughnut',
+    $('#cPayMix'),
+    buildDoughnutData(payKeys, payVals),
+    {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
+  );
+
+  // Tables
+  renderTable('#tblBookings tbody', bookings, r=>`<tr>
+    <td>${r.date}</td><td>${r.token||''}</td><td>${r.pid||''}</td><td>${r.name||''}</td><td>${r.status||''}</td></tr>`);
+
+  renderTable('#tblOPD tbody', opd, r=>`<tr>
+    <td>${new Date(r.ts).toLocaleString()}</td><td>${r.pid||''}</td><td>${r.name||''}</td>
+    <td>${(r.cc||'').slice(0,32)}</td><td>${(r.dx||'').slice(0,32)}</td></tr>`);
+
+  renderTable('#tblSales tbody', sales, r=>`<tr>
+    <td>${new Date(r.ts).toLocaleString()}</td><td>${r.buyer||''}</td><td>${r.items||0}</td>
+    <td>${(+r.total||0).toFixed(0)}</td><td>${r.payMode||''}</td></tr>`);
+
+  // CSV button content
+  $('#btnCSV').onclick=()=>exportCSV([
+    {title:'Bookings', header:['Date','Token','PID','Name','Status'], rows:bookings, toRow:r=>[r.date,r.token,r.pid,r.name,r.status]},
+    {title:'OPD', header:['DateTime','PID','Name','CC','Dx'], rows:opd, toRow:r=>[new Date(r.ts).toLocaleString(),r.pid,r.name,r.cc,r.dx]},
+    {title:'Sales', header:['DateTime','Buyer','Items','Net','PayMode'], rows:sales, toRow:r=>[new Date(r.ts).toLocaleString(),r.buyer,r.items,r.total,r.payMode]}
+  ]);
+}
+
+/* ---------- Presets ---------- */
+function applyPreset(type){
+  const t=new Date();
+  let fStr, tStr;
+  if(type==='today'){ fStr=today(); tStr=today(); }
+  else if(type==='yesterday'){ const y=addDays(today(),-1); fStr=y; tStr=y; }
+  else if(type==='7'){ fStr=addDays(today(),-6); tStr=today(); }
+  else if(type==='30'){ fStr=addDays(today(),-29); tStr=today(); }
+  else if(type==='month'){ const s=new Date(); s.setDate(1); fStr=fmtDate(s); tStr=today(); }
+  $('#from').value=fStr; $('#to').value=tStr; apply();
+}
+
+/* ---------- Init ---------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // default to Today
+  $('#from').value=today(); $('#to').value=today();
+  $('#apply').onclick=apply;
+  document.querySelectorAll('[data-preset]').forEach(p=>p.addEventListener('click',()=>applyPreset(p.dataset.preset)));
+  apply();
+});
+</script>
+</body>
+</html>

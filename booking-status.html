@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Booking Status · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script defer src="./scripts/db.js"></script>
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8;
+  --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+
+/* v8.1 Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-top:10px;border-radius:12px;background:#DED8F2B3;box-shadow:var(--shadow)}
+.header .logo{height:40px}
+
+/* v8.1 Banner */
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
+.small{font-size:12px;color:#64748b}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:#475569;margin:18px 0}
+.alert{margin-top:8px;padding:8px 10px;border-radius:8px;background:#dcfce7;color:#065f46;display:none}
+.alert.err{background:#fee2e2;color:#b91c1c}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo" onerror="this.style.display='none'">
+      <div>
+        <div style="font-weight:800;font-size:18px">Booking Status (Front Desk)</div>
+        <div class="small">Update patient flow · Feeds TV &amp; OPD</div>
+      </div>
+    </div>
+    <div class="row">
+      <a class="btn" href="./index.html">Home</a>
+      <a class="btn" href="./tv.html" target="_blank">Open TV</a>
+    </div>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <div class="card" style="background:var(--mint)">
+    <div class="row" style="align-items:end">
+      <div style="flex:2 1 420px">
+        <label class="small">Today’s Bookings</label>
+        <select id="sel" class="input">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+      <div style="flex:0 0 160px">
+        <label class="small">Set Status</label>
+        <select id="status" class="input">
+          <option value="queued">queued</option>
+          <option value="waiting">waiting</option>
+          <option value="called">called</option>
+          <option value="in-progress">in-progress</option>
+          <option value="serving">serving</option>
+          <option value="served">served</option>
+          <option value="completed">completed</option>
+          <option value="no-show">no-show</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+      </div>
+      <button class="btn primary" id="btnSet">Update</button>
+      <button class="btn" id="btnRefresh">Refresh</button>
+      <div class="badge" id="count">0</div>
+    </div>
+    <div id="msg" class="alert"></div>
+  </div>
+
+  <div class="card">
+    <table class="table" id="tbl">
+      <thead><tr><th>Token</th><th>PID</th><th>Name</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const msg=(t,ok=true)=>{const el=$("#msg");el.textContent=t;el.className="alert"+(ok?"":" err");el.style.display="block";setTimeout(()=>el.style.display="none",1600);};
+
+async function dexie(){ const db=new Dexie('clinicdb'); db.version(1).stores({bookings:'++id,date,ts,pid,token,status,patientName,type,contact'}); await db.open(); return db; }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+/* --- Live sync bus --- */
+const QUEUE_CH = 'clinic-queue-sync-v1';
+const bc = ('BroadcastChannel' in window) ? new BroadcastChannel(QUEUE_CH) : null;
+function notifyQueueUpdate(payload){
+  try{ bc?.postMessage({ type:'queue-update', payload }); }catch{}
+  try{ localStorage.setItem('queue_touch', String(Date.now())); }catch{}
+}
+
+async function listToday(){
+  if(window.DB?.listBookingsToday){ return (await DB.listBookingsToday())||[]; }
+  const db=await dexie(); const rows=await db.table('bookings').where('date').equals(today()).toArray(); db.close(); return rows;
+}
+async function setStatus(row,newStatus){
+  if(window.DB?.setBookingStatus){
+    await DB.setBookingStatus({pid:row.pid, token:row.token, status:newStatus});
+  }else{
+    const db=await dexie();
+    const hits=await db.table('bookings').where('date').equals(today()).toArray();
+    const r=hits.find(x=>x.pid===row.pid && String(x.token||'')===String(row.token||'')); 
+    if(r){ await db.table('bookings').update(r.id,{status:newStatus, ts: Date.now()}); }
+    db.close();
+  }
+  // 🔔 tell TV/OPD immediately
+  notifyQueueUpdate({ pid: row.pid, token: row.token, status: newStatus, ts: Date.now() });
+}
+
+let CACHE=[];
+function render(){
+  const sel=$("#sel"); sel.innerHTML='<option value="">— Select —</option>' + 
+    CACHE.map((r,i)=>`<option value="${i}">#${r.token||'—'} · ${r.patientName||''} · ${r.pid} · ${r.status||''}</option>`).join('');
+  $("#count").textContent=CACHE.length;
+
+  const tb=$("#tbl tbody"); tb.innerHTML='';
+  CACHE.forEach(r=>{
+    const t=new Date(r.ts||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    tb.insertAdjacentHTML('beforeend', `<tr>
+      <td>${r.token||'—'}</td><td>${r.pid}</td><td>${r.patientName||''}</td>
+      <td>${r.type||''}</td><td>${r.status||''}</td><td>${t}</td></tr>`);
+  });
+}
+
+async function refresh(){
+  const rows=await listToday();
+  rows.forEach(r=>{ r.status=(r.status||'').toLowerCase(); });
+  // latest first by ts
+  rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  CACHE=rows;
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  $("#btnRefresh").onclick=refresh;
+  $("#btnSet").onclick=async ()=>{
+    const ix=$("#sel").value; if(ix===''){ msg('Pick a patient',false); return; }
+    const row=CACHE[+ix]; const st=$('#status').value;
+    await setStatus(row, st); msg(`Updated #${row.token} → ${st}`);
+    refresh();
+  };
+  refresh();
+  setInterval(refresh, 10000); // safety poll
+  window.addEventListener('storage', e=>{ if(e.key==='queue_touch') refresh(); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Settings (Admin) · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="./db.js"></script>
+<style>
+:root{
+  /* v7.8 darker pastel theme (20% darker) */
+  --bg-gradient:linear-gradient(145deg,#edf3f0,#ece9f6,#fff0e6);
+  --mint:#C8E3D2;      /* darker mint */
+  --lav:#D7CEF0;       /* darker lavender */
+  --peach:#FFD8B8;     /* darker peach */
+  --card:#ffffff;
+  --ink:#0f172a;
+  --muted:#475569;
+  --primary:#17B26A;
+  --r:16px;
+  --shadow:0 6px 18px rgba(0,0,0,0.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;background:var(--mint);
+  border:1px solid #0001;border-radius:12px;
+  box-shadow:var(--shadow);margin-top:10px;padding:10px 14px;
+}
+.header .logo{height:40px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.card{border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px;background:var(--card)}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.btn:hover{background:#f1f5f9}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.badge{display:inline-block;background:#fff;border:1px solid #e2e8f0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+.small{font-size:12px;color:var(--muted)}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left;font-size:13px}
+th{background:#f1f5f9}
+
+/* Banner style unified with v7.8 */
+.banner{
+  overflow:hidden;
+  border-radius:var(--r);
+  margin:10px 0;
+  background:var(--lav);
+  height:160px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.banner img{
+  width:100%;
+  max-width:900px;
+  transform:scale(0.75);
+  transform-origin:center;
+  display:block;
+  border-radius:var(--r);
+  mix-blend-mode:multiply;
+  opacity:.95;
+}
+
+.alert{margin-top:8px;padding:8px 10px;border-radius:8px;background:#dcfce7;color:#065f46;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <img class="logo" src="./assets/logo.png" alt="logo">
+    <div>
+      <div style="font-weight:700;font-size:18px">Settings / Admin</div>
+      <div class="small">OAS admin · navigation · backup & seed</div>
+    </div>
+    <a class="btn" href="./index.html">Home</a>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <!-- Quick Links -->
+  <div class="card" style="background:var(--mint)">
+    <h3>Navigation</h3>
+    <div class="row">
+      <a class="btn" href="./bookings.html">Bookings</a>
+      <a class="btn" href="./opd-live.html">OPD</a>
+      <a class="btn" href="./lab.html">Lab</a>
+      <a class="btn" href="./tv.html">TV</a>
+      <a class="btn" href="./pharmacy.html">DRUVHI MEDICALS</a>
+      <a class="btn" href="./inventory.html">Inventory</a>
+      <a class="btn" href="./sales.html">Sales (POS)</a>
+      <a class="btn" href="./purchase.html">Purchases</a>
+      <a class="btn" href="./returns.html">Returns</a>
+      <a class="btn primary" href="./test.html">Open Test Suite</a>
+    </div>
+  </div>
+
+  <!-- Backup / Restore -->
+  <div class="card" style="background:var(--lav)">
+    <h3>Backup / Restore</h3>
+    <div class="row" style="align-items:end">
+      <div style="flex:0 0 240px">
+        <label>Tables to include</label>
+        <select id="tables" class="input" multiple size="6">
+          <option value="patients" selected>patients</option>
+          <option value="bookings" selected>bookings</option>
+          <option value="meta" selected>meta</option>
+          <option value="pharma_stock">pharma_stock</option>
+          <option value="pharma_sales">pharma_sales</option>
+          <option value="pharma_purchases">pharma_purchases</option>
+          <option value="pharma_returns">pharma_returns</option>
+        </select>
+      </div>
+      <div class="row" style="flex:1">
+        <button class="btn" onclick="exportJSON()">Export JSON</button>
+        <input id="importFile" type="file" accept=".json" class="input" style="max-width:300px">
+        <button class="btn" onclick="importJSON()">Import JSON</button>
+      </div>
+    </div>
+    <div id="msg" class="alert"></div>
+  </div>
+
+  <!-- Demo / Diagnostics -->
+  <div class="card" style="background:var(--peach)">
+    <h3>Seed & Diagnostics</h3>
+    <div class="row" style="gap:8px">
+      <button class="btn" onclick="toggleDiag()">Toggle Diagnostics</button>
+      <button class="btn" onclick="reSeed()">Re-seed Demo Data</button>
+      <button class="btn" onclick="clearSeed()">Clear Seed Flag</button>
+      <button class="btn" onclick="wipeAll()">Wipe All Local Data</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="badge">Today: <span id="k_today">0</span> bookings</div>
+      <div class="badge">Patients: <span id="k_pat">0</span></div>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+const msg = (t)=>{ const el=document.getElementById('msg'); el.textContent=t; el.style.display='block'; setTimeout(()=>el.style.display='none',2000); };
+
+async function refreshCounts(){
+  try{
+    const db = new Dexie('clinicdb');
+    const has = await db.open().then(()=>db.tables.map(t=>t.name)).catch(()=>[]);
+    const today = new Date().toISOString().slice(0,10);
+    let bookings=0, patients=0;
+    if(has.includes('bookings')) bookings = await db.table('bookings').where('date').equals(today).count();
+    if(has.includes('patients')) patients = await db.table('patients').count();
+    document.getElementById('k_today').textContent = bookings;
+    document.getElementById('k_pat').textContent = patients;
+    db.close();
+  }catch(e){ console.warn(e); }
+}
+
+function selectedTables(){
+  const sel=[...document.getElementById('tables').options].filter(o=>o.selected).map(o=>o.value);
+  return sel.length?sel:['patients','bookings','meta'];
+}
+
+async function exportJSON(){
+  const db = new Dexie('clinicdb'); await db.open();
+  const names = selectedTables();
+  const obj = {};
+  for(const n of names){
+    if(db.tables.map(t=>t.name).includes(n)){
+      obj[n] = await db.table(n).toArray();
+    }
+  }
+  db.close();
+  const blob = new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='clinic-backup.json'; a.click();
+  URL.revokeObjectURL(a.href); msg('Backup exported');
+}
+
+async function importJSON(){
+  const f = document.getElementById('importFile').files[0];
+  if(!f) return msg('Choose a JSON file');
+  const text = await f.text().catch(()=>null);
+  if(!text) return msg('Could not read file');
+  let data={}; try{ data=JSON.parse(text); }catch{ return msg('Invalid JSON'); }
+  const db = new Dexie('clinicdb'); await db.open();
+  for(const [name,rows] of Object.entries(data)){
+    if(!Array.isArray(rows)) continue;
+    const t = db.tables.find(t=>t.name===name);
+    if(!t) continue;
+    await t.clear();
+    await t.bulkAdd(rows);
+  }
+  db.close();
+  msg('Backup restored. Reloading…'); setTimeout(()=>location.reload(),600);
+}
+
+function toggleDiag(){
+  if(!window.DB || !DB.enableDiagnostics) return msg('DB not loaded');
+  window._diagEnabled = !window._diagEnabled;
+  DB.enableDiagnostics(window._diagEnabled);
+  msg('Diagnostics: '+(window._diagEnabled?'ON':'OFF'));
+}
+function reSeed(){
+  localStorage.removeItem('clinic_seed_v1');
+  msg('Seed flag cleared. Reloading to insert demo…');
+  setTimeout(()=>location.reload(),400);
+}
+function clearSeed(){
+  localStorage.removeItem('clinic_seed_v1');
+  msg('Seed flag cleared (no reload).');
+}
+async function wipeAll(){
+  if(!confirm('This will erase all local data. Continue?')) return;
+  await Dexie.delete('clinicdb').catch(()=>{});
+  localStorage.clear();
+  msg('All local data wiped. Reloading…');
+  setTimeout(()=>location.reload(),600);
+}
+
+refreshCounts();
+</script>
+
+<!-- Engines (kept consistent with rest of app) -->
+<script src="/scripts/qrcode.min.js?v=1.1"></script>
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<script src="/scripts/app-wiring.js?v=1.1"></script>
+<script src="/scripts/seed-and-diagnostics.js?v=1.2"></script>
+</body>
+</html>

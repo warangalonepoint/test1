@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Lab Hub · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8; --teal:#C8F1EC;
+  --card:#ffffff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px}
+.header .logo{height:40px}
+.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:11px}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
+.total{font-weight:800;text-align:right}
+.small{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div style="font-weight:700;font-size:18px">Lab Hub</div>
+        <div class="small">Maintain tests & prices · Receive OPD lab orders</div>
+      </div>
+    </div>
+    <div class="row">
+      <a class="btn" href="./index.html">Home</a>
+      <a class="btn" href="./opd-live.html">OPD</a>
+    </div>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <!-- Test Catalog -->
+  <div class="card" style="background:var(--mint)">
+    <div class="row" style="align-items:end">
+      <div style="flex:2 1 360px">
+        <label>Test name</label>
+        <input id="tname" class="input" placeholder="CBC / CRP / NS1">
+      </div>
+      <div style="flex:0 0 140px">
+        <label>Price (₹)</label>
+        <input id="tprice" class="input" type="number" min="0" step="1" placeholder="₹">
+      </div>
+      <button class="btn primary" id="btnAddTest">Add / Update</button>
+      <button class="btn" id="btnSeed">Seed from poster</button>
+      <div class="badge" id="countBadge">0 tests</div>
+    </div>
+    <table class="table" style="margin-top:10px" id="tTable">
+      <thead><tr><th>#</th><th>Test</th><th>Price</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Incoming Orders -->
+  <div class="card" style="background:var(--peach)">
+    <div class="row">
+      <h3 style="margin:0">Incoming Lab Orders</h3>
+      <div class="small" id="queueInfo">—</div>
+    </div>
+    <table class="table" id="qTable">
+      <thead><tr><th>Time</th><th>PID</th><th>Name</th><th>Tests</th><th>Total</th><th>Action</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="justify-content:flex-end;margin-top:8px">
+      <button class="btn" id="btnClearQueue">Clear Queue</button>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+
+/* ------- Catalog persistence ------- */
+const KEY='lab_tests_json';
+function loadTests(){
+  let arr=[]; try{arr=JSON.parse(localStorage.getItem(KEY)||'[]');}catch{}
+  if(!Array.isArray(arr)) arr=[];
+  arr = arr.filter(x=>x && (x.name||x.n)).map(x=>({name:x.name||x.n, price:+(x.price||x.p||0)}));
+  return arr;
+}
+function saveTests(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
+
+let TESTS = loadTests();
+function renderTests(){
+  const tb=$("#tTable tbody"); tb.innerHTML='';
+  TESTS.forEach((t,i)=>{
+    tb.innerHTML += `<tr>
+      <td>${i+1}</td><td>${t.name}</td><td>₹ ${(+t.price||0).toFixed(0)}</td>
+      <td>
+        <button class="btn" onclick="editTest(${i})">Edit</button>
+        <button class="btn" onclick="delTest(${i})">Delete</button>
+      </td>
+    </tr>`;
+  });
+  $("#countBadge").textContent = `${TESTS.length} tests`;
+}
+window.editTest = (i)=>{ const t=TESTS[i]; $('#tname').value=t.name; $('#tprice').value=t.price; };
+window.delTest = (i)=>{ TESTS.splice(i,1); saveTests(TESTS); renderTests(); };
+
+$("#btnAddTest").onclick = ()=>{
+  const name = ($('#tname').value||'').trim(); const price = +($('#tprice').value||0);
+  if(!name) return;
+  const ix = TESTS.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());
+  if(ix>=0) TESTS[ix].price = price; else TESTS.push({name,price});
+  TESTS.sort((a,b)=>a.name.localeCompare(b.name));
+  saveTests(TESTS); renderTests();
+  $('#tname').value=''; $('#tprice').value='';
+};
+
+$("#btnSeed").onclick = ()=>{
+  const seed = [
+    {name:'CBP',price:300},{name:'CRP',price:400},{name:'TYPHOID IgM IgG',price:300},{name:'CUE',price:150},
+    {name:'RBS',price:50},{name:'TSB',price:300},{name:'DENGUE IgM IgG',price:800},{name:'MALARIA FOR Pv Pf',price:800},
+    {name:'T3, T4, TSH',price:500},{name:'URINE C/S AUTOMATED',price:1100},{name:'URINE C/S CONVENTION',price:700},
+    {name:'LFT',price:250},{name:'CREATININE',price:150},{name:'HBA1C',price:550},{name:'LIPID PROFILE',price:550},
+    {name:'SERUM ELECTROLYTES',price:100},{name:'BLOOD GROUPING',price:100}
+  ];
+  // merge without duplicates
+  const names=new Set(TESTS.map(t=>t.name.toLowerCase()));
+  seed.forEach(s=>{ if(!names.has(s.name.toLowerCase())) TESTS.push(s); });
+  TESTS.sort((a,b)=>a.name.localeCompare(b.name));
+  saveTests(TESTS); renderTests();
+};
+
+renderTests();
+
+/* ------- Incoming Orders from OPD ------- */
+const QKEY='lab_orders_queue';
+function loadQueue(){ let arr=[]; try{arr=JSON.parse(localStorage.getItem(QKEY)||'[]');}catch{} return Array.isArray(arr)?arr:[]; }
+function saveQueue(arr){ localStorage.setItem(QKEY, JSON.stringify(arr)); }
+
+function renderQueue(){
+  const list = loadQueue();
+  $("#queueInfo").textContent = `${list.length} pending`;
+  const tb=$("#qTable tbody"); tb.innerHTML='';
+  list.forEach((o,i)=>{
+    const t = new Date(o.ts||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const tests = (o.items||[]).map(x=>x.test).join(', ');
+    const total = o.total || (o.items||[]).reduce((s,x)=>s+(+x.price||0),0);
+    tb.innerHTML += `<tr>
+      <td>${t}</td><td>${o.pid||''}</td><td>${o.name||''}</td>
+      <td>${tests}</td><td>₹ ${(total||0).toFixed(0)}</td>
+      <td>
+        <button class="btn" onclick="markDone(${i})">Mark Done</button>
+        <button class="btn" onclick="removeQ(${i})">Remove</button>
+      </td>
+    </tr>`;
+  });
+}
+window.markDone = (i)=>{ const q=loadQueue(); q.splice(i,1); saveQueue(q); renderQueue(); };
+window.removeQ = window.markDone;
+
+$("#btnClearQueue").onclick = ()=>{ if(confirm('Clear all pending orders?')){ saveQueue([]); renderQueue(); } };
+
+renderQueue();
+setInterval(renderQueue, 8000); // auto-refresh
+</script>
+</body>
+</html>

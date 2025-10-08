@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Booking Slip · A6 x 2 (Side by Side)</title>
+<style>
+/* A5 landscape page holds two A6 portrait slips side-by-side */
+@page { size: A5 landscape; margin: 6mm; }
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.4 system-ui;color:#111}
+.sheet{display:flex;gap:10mm;align-items:stretch;justify-content:space-between;min-height:calc(100vh - 12mm)}
+
+/* Each slip is sized to A6 portrait-ish within margins */
+.slip{
+  flex:1 1 0;
+  border:1px dashed #999;
+  padding:6mm;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+
+/* Header */
+.hdr{display:flex;gap:8px;align-items:center;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:6px}
+.hdr .logo{width:46px;height:46px;object-fit:contain}
+.hdr .t{font-weight:800;font-size:17px;line-height:1.1}
+.hdr .sub{font-size:11px;color:#334155;margin-top:2px}
+
+/* Rows */
+.row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
+.lab{font-weight:700}
+
+/* QR */
+.qr{width:90px;height:90px;border:1px dashed #999;display:inline-flex;align-items:center;justify-content:center}
+
+/* Footer */
+.foot{border-top:1px solid #ddd;margin-top:8px;padding-top:6px;text-align:center;font-size:11px;color:#334155}
+
+/* Small tag for Original / Duplicate */
+.tag{font-size:11px;font-weight:700;color:#334155;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:1px 8px;float:right}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <!-- ORIGINAL -->
+  <div class="slip" id="copyA">
+    <div class="hdr">
+      <img class="logo" src="/assets/logo.png" alt="logo">
+      <div style="flex:1">
+        <div class="t" id="clinicNameA">Dr. Charan Child Clinic</div>
+        <div class="sub" id="docLinesA"></div>
+      </div>
+      <div class="tag">ORIGINAL</div>
+    </div>
+
+    <div class="row"><div><span class="lab">Token:</span> <span id="tokA">—</span></div><div><span class="lab">Date:</span> <span id="dateA">—</span></div></div>
+    <div class="row"><div><span class="lab">PID:</span> <span id="pidA">—</span></div><div><span class="lab">Name:</span> <span id="nameA">—</span></div></div>
+    <div class="row"><div><span class="lab">Age:</span> <span id="ageA">—</span></div><div><span class="lab">Gender:</span> <span id="genA">—</span></div></div>
+    <!-- Reason row removed -->
+    <div class="row"><div><span class="lab">Contact:</span> <span id="phA">—</span></div><div><span class="lab">Payment:</span> <span id="pmA">—</span></div></div>
+    <div class="row"><div><span class="lab">Ref:</span> <span id="prA">—</span></div></div>
+    <div class="row" style="align-items:center"><div class="lab">QR:</div><div id="qrA" class="qr"></div></div>
+    <div class="foot" id="addrA">Powered by Onestop AI Services</div>
+  </div>
+
+  <!-- DUPLICATE -->
+  <div class="slip" id="copyB">
+    <div class="hdr">
+      <img class="logo" src="/assets/logo.png" alt="logo">
+      <div style="flex:1">
+        <div class="t" id="clinicNameB">Dr. Charan Child Clinic</div>
+        <div class="sub" id="docLinesB"></div>
+      </div>
+      <div class="tag">DUPLICATE</div>
+    </div>
+
+    <div class="row"><div><span class="lab">Token:</span> <span id="tokB">—</span></div><div><span class="lab">Date:</span> <span id="dateB">—</span></div></div>
+    <div class="row"><div><span class="lab">PID:</span> <span id="pidB">—</span></div><div><span class="lab">Name:</span> <span id="nameB">—</span></div></div>
+    <div class="row"><div><span class="lab">Age:</span> <span id="ageB">—</span></div><div><span class="lab">Gender:</span> <span id="genB">—</span></div></div>
+    <!-- Reason row removed -->
+    <div class="row"><div><span class="lab">Contact:</span> <span id="phB">—</span></div><div><span class="lab">Payment:</span> <span id="pmB">—</span></div></div>
+    <div class="row"><div><span class="lab">Ref:</span> <span id="prB">—</span></div></div>
+    <div class="row" style="align-items:center"><div class="lab">QR:</div><div id="qrB" class="qr"></div></div>
+    <div class="foot" id="addrB">Powered by Onestop AI Services</div>
+  </div>
+</div>
+
+<script src="/scripts/qrcode.min.js"></script>
+<script>
+(async function(){
+  // 1) Load doctor header from config
+  let cfg={};
+  try{
+    const r = await fetch('/config/doctor-config.json',{cache:'no-store'});
+    cfg = await r.json();
+  }catch{}
+  const mkLine = c => [c.doctorName,c.degrees,c.designation,c.regNo].filter(Boolean).join(' · ');
+  const addr = [cfg.addressLine1,cfg.phone,cfg.timings].filter(Boolean).join(' · ');
+  document.getElementById('clinicNameA').textContent = cfg.clinicName || 'Dr. Charan Child Clinic';
+  document.getElementById('clinicNameB').textContent = cfg.clinicName || 'Dr. Charan Child Clinic';
+  document.getElementById('docLinesA').textContent = mkLine(cfg);
+  document.getElementById('docLinesB').textContent = mkLine(cfg);
+  document.getElementById('addrA').textContent = addr || 'Powered by Onestop AI Services';
+  document.getElementById('addrB').textContent = addr || 'Powered by Onestop AI Services';
+
+  // 2) Get booking payload (querystring or fallback)
+  function getData(){
+    try{
+      const u=new URL(location.href);
+      const j=u.searchParams.get('data');
+      return j?JSON.parse(decodeURIComponent(j)):JSON.parse(localStorage.getItem('last_booking')||'null');
+    }catch{return null;}
+  }
+  const d = getData() || {};
+  const today = new Date().toISOString().slice(0,10);
+
+  // 3) Fill both copies (no reason)
+  function put(s){
+    const get = k => (d[k]??'—');
+    document.getElementById('tok'+s).textContent  = get('token');
+    document.getElementById('date'+s).textContent = d.date || today;
+    document.getElementById('pid'+s).textContent  = get('pid');
+    document.getElementById('name'+s).textContent = get('patientName');
+    document.getElementById('age'+s).textContent  = get('age')||'-';
+    document.getElementById('gen'+s).textContent  = get('gender')||'-';
+    document.getElementById('ph'+s).textContent   = get('contact')||'-';
+    document.getElementById('pm'+s).textContent   = get('payMode')||'-';
+    document.getElementById('pr'+s).textContent   = get('payRef')||'-';
+  }
+  put('A'); put('B');
+
+  // 4) QR (PID+name)
+  const payload = JSON.stringify({pid:d.pid,name:d.patientName});
+  new QRCode(document.getElementById('qrA'),{text:payload,width:90,height:90,correctLevel:QRCode.CorrectLevel.M});
+  new QRCode(document.getElementById('qrB'),{text:payload,width:90,height:90,correctLevel:QRCode.CorrectLevel.M});
+
+  // 5) Auto print if requested
+  if (new URL(location.href).searchParams.get('print')==='1') {
+    setTimeout(()=>window.print(), 200);
+  }
+})();
+</script>
+</body>
+</html>

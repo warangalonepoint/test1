@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sales · Pharmacy · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<style>
+:root{--bg:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);--card:#fff;--ink:#0f172a;--muted:#475569;--primary:#139a5b;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.08);--banner-bg:#f5f3ff;--banner-line:#e5e7eb}
+*{box-sizing:border-box} body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);} a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.topbar{margin-top:10px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);background:var(--banner-bg);border:1px solid var(--banner-line)}
+.topbar .row{display:flex;align-items:center;gap:12px;padding:10px 12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:40px}
+.brand .title{font-weight:800;font-size:18px}
+.brand .sub{font-size:12px;color:var(--muted)}
+.links{margin-left:auto;display:flex;gap:8px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.total{font-weight:700;font-size:15px;text-align:right;padding:4px 0}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0 14px}
+@media print{
+  body{background:#fff;color:#000;margin:0}
+  .wrap{display:none}
+  #printArea{display:block;padding:6mm}
+  .a5{width:148mm;height:210mm;margin:auto}
+  .bill{font:13px/1.45 system-ui;color:#000}
+  .bill table{width:100%;border-collapse:collapse}
+  .bill th,.bill td{border:1px solid #000;padding:4px}
+  .bill h2{margin:0 0 4px}
+}
+#printArea{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="row">
+      <div class="brand">
+        <img class="logo" src="./assets/logo.png" alt="logo">
+        <div>
+          <div class="title">Sales (POS)</div>
+          <div class="sub">FEFO · Retail Bill A5 · barcode-ready</div>
+        </div>
+      </div>
+      <div class="links">
+        <a class="btn" href="./pharmacy.html">DRUVHI MEDICALS</a>
+        <a class="btn" href="./index.html">Home</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:#D6E5DD">
+    <h3>New Sale</h3>
+    <div class="row">
+      <div style="flex:1">
+        <label>Patient / Buyer Name</label>
+        <input id="buyer" class="input" placeholder="Walk-in / PID">
+      </div>
+      <div style="flex:1">
+        <label>Search Product (name or barcode)</label>
+        <input id="pname" class="input" oninput="suggest()" list="plist" placeholder="Start typing or scan…">
+      </div>
+      <datalist id="plist"></datalist>
+      <div style="flex:0 0 110px">
+        <label>Qty</label>
+        <input id="pqty" class="input" type="number" min="1" value="1">
+      </div>
+      <div style="flex:1 1 200px">
+        <label>Payment</label>
+        <div class="row">
+          <select id="payMode" class="input" style="flex:1">
+            <option>Cash</option><option>UPI</option><option>Card</option><option>Wallet</option>
+          </select>
+          <input id="payRef" class="input" style="flex:1" placeholder="Ref / Txn (optional)">
+        </div>
+      </div>
+      <div style="flex:0 0 220px;align-self:end" class="row">
+        <button class="btn primary" onclick="addItem()">Add Item</button>
+        <button class="btn" data-scan data-scan-target="#pname" id="scanSales">Scan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:#FFF9F3">
+    <table class="table" id="saleTable">
+      <thead>
+        <tr><th>#</th><th>Product</th><th>Batch</th><th>EXP</th><th>Qty</th><th>MRP</th><th>GST %</th><th>Amount</th></tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr><td colspan="7" class="total">Subtotal</td><td id="subTotal">0.00</td></tr>
+        <tr><td colspan="7" class="total">Discount (%)</td><td><input id="disc" type="number" style="width:70px;text-align:right" value="0" oninput="recalc()"></td></tr>
+        <tr><td colspan="7" class="total">Net Total</td><td id="netTotal">0.00</td></tr>
+      </tfoot>
+    </table>
+    <div class="row" style="justify-content:flex-end;margin-top:8px;gap:8px">
+      <button class="btn" onclick="clearAll()">Clear</button>
+      <button class="btn primary" onclick="printBill()">🖨️ Print A5 Bill</button>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+let STOCK=[], SALE=[];
+function loadStock(){ try{STOCK=JSON.parse(localStorage.getItem('pharma_stock_json')||'[]')||[]}catch{STOCK=[]} }
+loadStock();
+
+function suggest(){
+  const val=document.getElementById('pname').value.toLowerCase();
+  const d=document.getElementById('plist'); d.innerHTML='';
+  STOCK.filter(s=> (s.name||'').toLowerCase().includes(val)).slice(0,10).forEach(s=>{
+    const o=document.createElement('option'); o.value=s.name; d.appendChild(o);
+  });
+}
+function toExp(mmYY){ const [m,y]=String(mmYY||'').split('/').map(n=>parseInt(n,10)); return new Date(2000+(y||0),((m||1)-1),1); }
+function eqi(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase();}
+function guessGST(mrp){ if(mrp<50)return 5; if(mrp<200)return 12; if(mrp<500)return 18; return 28; }
+function persistStock(){ localStorage.setItem('pharma_stock_json',JSON.stringify(STOCK)); }
+function q(sel){return document.querySelector(sel)} function g(id){return document.getElementById(id).value} function s(id,v){document.getElementById(id).value=v}
+
+function addFromPool(pool, qty){
+  let need=qty; const picks=[];
+  for(const st of pool.sort((a,b)=>toExp(a.exp)-toExp(b.exp))){ // FEFO
+    if(need<=0) break; if((st.qty||0)<=0) continue;
+    const take=Math.min(st.qty,need); st.qty-=take; need-=take;
+    picks.push({name:st.name,batch:st.batch,exp:st.exp,qty:take,mrp:+st.mrp,gst:guessGST(+st.mrp)});
+  }
+  if(need>0){ alert('Insufficient stock'); return; }
+  SALE.push(...picks); persistStock(); render();
+}
+function addItem(){
+  const name=g('pname').trim(); const qty=+g('pqty')||0; if(!name||!qty)return;
+  const pool = STOCK.filter(s=>eqi(s.name,name));
+  if(!pool.length){ alert('Not found'); return; }
+  addFromPool(pool, qty);
+  s('pname',''); s('pqty','1');
+}
+function addByBarcode(code){
+  let pool = STOCK.filter(s=> (s.barcode||`${s.name}|${s.batch}`)===code );
+  if(!pool.length){
+    if(code.includes('|')){
+      const [nm,bt]=code.split('|');
+      pool = STOCK.filter(s=>eqi(s.name,nm) && s.batch===bt);
+    }else{
+      pool = STOCK.filter(s=>eqi(s.name,code));
+    }
+  }
+  if(!pool.length){ alert('Barcode not found'); return; }
+  addFromPool(pool, 1);
+}
+window.onScanFilled = ({input, value}) => { if (input && input.id === 'pname' && value) { addByBarcode(value); } };
+
+function render(){
+  const tb=q('#saleTable tbody'); tb.innerHTML=''; let sub=0;
+  SALE.forEach((r,i)=>{ const amt=r.qty*r.mrp; sub+=amt;
+    tb.innerHTML+=`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.batch}</td><td>${r.exp}</td><td>${r.qty}</td><td>${r.mrp.toFixed(2)}</td><td>${r.gst}%</td><td>${amt.toFixed(2)}</td></tr>`;
+  });
+  q('#subTotal').textContent=sub.toFixed(2); recalc();
+}
+function recalc(){ const sub=+q('#subTotal').textContent||0; const d=+g('disc')||0; q('#netTotal').textContent=(sub*(1-d/100)).toFixed(2); }
+
+function printBill(){
+  if(!SALE.length)return;
+  const buyer=g('buyer')||'Walk-in'; const now=new Date(); const id='DM'+now.getTime().toString().slice(-6);
+  const gstSplit={5:0,12:0,18:0,28:0}; SALE.forEach(r=>gstSplit[r.gst]=(gstSplit[r.gst]||0)+(r.qty*r.mrp));
+  const total=+q('#netTotal').textContent||0;
+  const html=`<div class="a5 bill">
+  <h2>DRUVHI MEDICALS</h2><div>Saraswathi Nagar, Gopalpur, Hanamkonda · Ph: 08340840340</div><hr>
+  <div><b>Invoice:</b> ${id} &nbsp; <b>Date:</b> ${now.toLocaleDateString()} ${now.toLocaleTimeString()}</div>
+  <div><b>Buyer:</b> ${buyer}</div>
+  <div><b>Payment:</b> ${g('payMode')} ${g('payRef')?('· '+g('payRef')):''}</div>
+  <table><thead><tr><th>#</th><th>Product</th><th>Batch</th><th>EXP</th><th>Qty</th><th>MRP</th><th>GST %</th><th>Amount</th></tr></thead><tbody>
+  ${SALE.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.batch}</td><td>${r.exp}</td><td>${r.qty}</td><td>${r.mrp.toFixed(2)}</td><td>${r.gst}</td><td>${(r.qty*r.mrp).toFixed(2)}</td></tr>`).join('')}
+  </tbody></table>
+  <div style="margin-top:6px;text-align:right">Subtotal : ${q('#subTotal').textContent}</div>
+  <div style="text-align:right">Discount : ${g('disc')} %</div>
+  <div style="text-align:right"><b>Net Total : ${total.toFixed(2)}</b></div>
+  <hr><div><b>GST Break-up</b><br>5%: ₹${gstSplit[5].toFixed(2)}&nbsp; 12%: ₹${gstSplit[12].toFixed(2)}&nbsp; 18%: ₹${gstSplit[18].toFixed(2)}&nbsp; 28%: ₹${gstSplit[28].toFixed(2)}</div>
+  <div style="margin-top:8px;text-align:center;font-size:12px">Powered by Onestop AI Services · © 2025 · All Rights Reserved</div></div>`;
+  q('#printArea').innerHTML=html; window.print();
+  saveSale({id,buyer,total,items:SALE,date:now.toISOString(),payMode:g('payMode'),payRef:g('payRef')});
+  clearAll();
+}
+function saveSale(bill){
+  let arr=[]; try{arr=JSON.parse(localStorage.getItem('pharma_sales_json')||'[]')}catch{}
+  arr.push(bill); localStorage.setItem('pharma_sales_json',JSON.stringify(arr));
+  const today=new Date().toISOString().slice(0,10);
+  const count=arr.filter(b=>b.date.startsWith(today)).length;
+  localStorage.setItem('pharma_sales_today',count);
+  window.dispatchEvent(new StorageEvent('storage',{key:'pharma_sales_today'}));
+}
+function clearAll(){ SALE=[]; render(); }
+
+/* ---- Rx Receiver Dock (unchanged) ---- */
+(function(){
+  const QKEY='pharma_rx_queue';
+  const dock=document.createElement('div');
+  dock.style.cssText='position:fixed;right:14px;bottom:14px;z-index:9999';
+  dock.innerHTML='<button id="rxDock" style="padding:8px 12px;border-radius:20px;background:#111827;color:#fff;border:none;font-weight:700">Pending Rx</button><div id="rxPanel" style="display:none;position:fixed;right:14px;bottom:56px;width:320px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.12);padding:10px"></div>';
+  document.body.appendChild(dock);
+  const box=document.getElementById('rxPanel');
+  function renderDock(){
+    let arr=[]; try{arr=JSON.parse(localStorage.getItem(QKEY)||'[]');}catch{}
+    box.innerHTML = arr.length ? '' : '<div style="font:12px system-ui;color:#475569">No pending prescriptions</div>';
+    arr.slice().reverse().forEach((o,ix)=>{
+      const idx=arr.length-1-ix;
+      const lines=(o.items||[]).map(x=>`${x.name} — ${x.dose||''} ${x.freq||''} ×${x.qty||1}`).join('<br>');
+      const d=document.createElement('div');
+      d.style.cssText='border:1px solid #e5e7eb;border-radius:10px;padding:8px;margin:6px 0;background:#F8FAFC;font:13px system-ui';
+      d.innerHTML=`<b>${o.pid||''} — ${o.name||''}</b>
+        <div style="font-size:12px;color:#475569;margin:4px 0">${lines||'(no items?)'}</div>
+        <div style="display:flex;gap:6px">
+          <button data-act="add" data-idx="${idx}">Add to Cart</button>
+          <button data-act="done" data-idx="${idx}">Mark Done</button>
+        </div>`;
+      box.appendChild(d);
+    });
+  }
+  document.getElementById('rxDock').onclick=()=>{ box.style.display=box.style.display==='block'?'none':'block'; renderDock(); };
+  box.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    let arr=[]; try{arr=JSON.parse(localStorage.getItem(QKEY)||'[]');}catch{}
+    const idx=+b.dataset.idx; const order=arr[idx]; if(!order) return;
+    if(b.dataset.act==='add'){
+      (order.items||[]).forEach(it=>{
+        const pool = STOCK.filter(s=>eqi(s.name,it.name));
+        if(pool.length){ addFromPool(pool, it.qty||1); }
+      });
+      render(); return;
+    }
+    if(b.dataset.act==='done'){ arr.splice(idx,1); localStorage.setItem(QKEY,JSON.stringify(arr)); renderDock(); }
+  });
+})();
+</script>
+
+<!-- Engines -->
+<script src="/scripts/qrcode.min.js?v=1.1"></script>
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<script src="/scripts/app-wiring.js?v=1.1"></script>
+<script src="/scripts/seed-and-diagnostics.js?v=1.3"></script>
+</body>
+</html>

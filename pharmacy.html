@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DRUVHI MEDICALS · Pharmacy Hub</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="./config.js"></script>
+<style>
+/* ---------- v8.4 pastel set ---------- */
+:root{
+  --bg-gradient: linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);
+  --mint:#D6E5DD; --lav:#DED8F2; --peach:#FFE8D9; --pink:#FBD6E3; --teal:#C8F5E4; --amber:#FFE9B3; --gray:#f4f4f5;
+  --card:#ffffff; --ink:#0f172a; --muted:#475569; --primary:#139a5b;
+  --r:18px; --shadow:0 6px 18px rgba(0,0,0,0.08);
+}
+/* Header = Mint, Banner = Lavender */
+:root{ --header-tint:#D6E5DD; --header-tint-rgba:214,229,221; --banner-tint:#DED8F2; --banner-tint-rgba:222,216,242; }
+
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui;background:var(--bg-gradient);color:var(--ink);}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+
+/* Header */
+.header{
+  display:flex;align-items:center;justify-content:space-between;padding:10px 12px;
+  background:rgba(var(--header-tint-rgba),0.7);
+  border:1px solid rgba(0,0,0,0.06);border-radius:12px;margin-top:10px;
+  box-shadow:var(--shadow);backdrop-filter:saturate(120%) blur(2px);
+}
+.header .logo{height:40px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.btn:hover{background:#f1f5f9}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+
+/* Info bar (transparent overlay) */
+.infobar{
+  margin:6px 0 0; padding:8px 12px; border-radius:12px;
+  background:rgba(51,65,85,0.06); color:#334155;
+  backdrop-filter:saturate(120%) blur(2px);
+  box-shadow:0 2px 8px rgba(15,23,42,.06);
+  font-size:13px;
+}
+
+/* Banner */
+.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:var(--banner-tint)}
+.banner img{width:100%;transform:scale(0.65);transform-origin:center;border-radius:var(--r);display:block;mix-blend-mode:multiply;opacity:.95}
+.banner::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(var(--banner-tint-rgba),.3),rgba(var(--banner-tint-rgba),.3))}
+
+/* Tiles */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px}
+.tile{border-radius:var(--r);padding:20px;text-align:left;box-shadow:var(--shadow);transition:.25s transform ease}
+.tile:hover{transform:translateY(-4px)}
+.tile h3{margin:4px 0 6px 0}
+.tile p{margin:0;color:var(--muted);font-size:13px}
+.badge{display:inline-block;background:#fff;border:1px solid #e2e8f0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+
+/* Distinct tile pastels */
+.inv{background:var(--mint)}
+.sales{background:var(--peach)}
+.purch{background:var(--lav)}
+.returns{background:var(--pink)}
+.gst{background:var(--teal)}
+
+/* KPI strip */
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.kpi{border:1px solid #e2e8f0;border-radius:14px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+.kpi .label{font-size:12px;color:var(--muted)}
+.kpi .num{font-size:22px;font-weight:900;margin-top:6px}
+
+/* KPI colours */
+.kpi.stock{background:var(--mint)}
+.kpi.low{background:var(--amber)}
+.kpi.near{background:var(--pink)}
+.kpi.sales{background:var(--peach)}
+.kpi.purch{background:var(--lav)}
+.kpi.retcount{background:var(--teal)}
+.kpi.retval{background:var(--gray)}
+
+/* Footer */
+.footer{text-align:center;padding:16px 4px;font-size:13px;color:var(--muted);margin:22px 0 14px}
+
+/* Modal (Returns Log) — slide-in from right */
+.modal-backdrop{
+  position:fixed;inset:0;display:block;opacity:0;pointer-events:none;
+  background:rgba(0,0,0,.0); /* start transparent */
+  transition:opacity .25s ease, background .25s ease;
+  z-index:50;
+}
+.modal-backdrop.show{opacity:1;pointer-events:auto;background:rgba(0,0,0,.35);backdrop-filter:blur(2px)}
+.modal{
+  position:absolute;top:0;right:0;height:100vh;width:min(100%,980px);
+  background:#fff;border-radius:16px 0 0 16px;box-shadow:0 20px 50px rgba(0,0,0,.25);
+  transform:translateX(24px);opacity:0;
+  transition:transform .28s cubic-bezier(.22,.61,.36,1), opacity .22s ease;
+  display:flex;flex-direction:column;
+}
+.modal-backdrop.show .modal{transform:translateX(0);opacity:1}
+
+.modal .head{
+  display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#f8fafc;border-radius:16px 0 0 0;
+}
+.modal .body{padding:12px 14px;overflow:auto}
+.modal .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.modal .table{width:100%;border-collapse:collapse;font-size:13px}
+.modal .table th,.modal .table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left}
+.modal .table th{background:#f1f5f9}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <img class="logo" src="./assets/logo.png" alt="logo">
+    <div>
+      <div style="font-weight:900;font-size:18px">DRUVHI MEDICALS</div>
+      <div style="font-size:13px;color:var(--muted)">Pharmacy Hub</div>
+    </div>
+    <a class="btn" href="./index.html">Home</a>
+  </div>
+  <!-- Transparent info bar -->
+  <div class="infobar">
+    H.No. 2-1-45, Saraswathi Nagar, Gopalpur, Hanamkonda ·
+    Ph: <b>08340840340</b> ·
+    GST Licence No: <b>20&amp;21:TS/WLU/2021-74472</b>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner">
+    <img src="./assets/banner.png" alt="Clinic Banner">
+  </div>
+
+  <!-- Quick modules -->
+  <div class="grid">
+    <a class="tile inv" href="./inventory.html">
+      <div class="badge">FEFO</div>
+      <h3>Inventory</h3>
+      <p>Manage batches, expiries, low stock alerts.</p>
+    </a>
+
+    <a class="tile sales" href="./sales.html">
+      <div class="badge">POS</div>
+      <h3>Sales</h3>
+      <p>Dispense from FEFO, print retail bill (A5).</p>
+    </a>
+
+    <a class="tile purch" href="./purchase.html">
+      <div class="badge">GST</div>
+      <h3>Purchases</h3>
+      <p>Add distributor invoices, update stock (A4).</p>
+    </a>
+
+    <a class="tile returns" href="./returns.html">
+      <div class="badge">Reverse</div>
+      <h3>Returns</h3>
+      <p>Sales/Purchase returns, stock adjust, print slip (A5).</p>
+    </a>
+
+    <a class="tile gst" href="./gst.html">
+      <div class="badge">Report</div>
+      <h3>GST Reports</h3>
+      <p>CGST/SGST classes, monthly summary, export.</p>
+    </a>
+  </div>
+
+  <!-- Live overview KPIs -->
+  <div class="card">
+    <div class="kpis">
+      <div class="kpi stock"><div class="label">Total Batches</div><div class="num" id="k_stock">0</div></div>
+      <div class="kpi low"><div class="label">Low Stock (≤2)</div><div class="num" id="k_low">0</div></div>
+      <div class="kpi near"><div class="label">Near Expiry (≤2 mo)</div><div class="num" id="k_exp">0</div></div>
+      <div class="kpi sales"><div class="label">Sales Today</div><div class="num" id="k_salesToday">0</div></div>
+      <div class="kpi purch"><div class="label">Purchases (This Month)</div><div class="num" id="k_purchasesMonth">0</div></div>
+      <div class="kpi retcount"><div class="label">Returns (This Month)</div><div class="num" id="k_returnsMonth">0</div></div>
+      <div class="kpi retval"><div class="label">Returns Value (This Month)</div><div class="num" id="k_returnsValue">₹0</div></div>
+    </div>
+    <div style="margin-top:12px;text-align:right">
+      <button class="btn" onclick="openLog()">View Returns Log</button>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<!-- Modal: Returns Log -->
+<div id="modalWrap" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal">
+    <div class="head">
+      <div style="font-weight:800">Returns Log</div>
+      <div class="row">
+        <label for="logMonth">Month:</label>
+        <input type="month" id="logMonth" />
+        <button class="btn" onclick="refreshLog()">Refresh</button>
+        <button class="btn" onclick="exportLogCSV()">Export CSV</button>
+        <button class="btn" onclick="closeLog()">Close</button>
+      </div>
+    </div>
+    <div class="body">
+      <table class="table" id="logTable">
+        <thead>
+          <tr>
+            <th>Date/Time</th>
+            <th>Type</th>
+            <th>Reference</th>
+            <th>Party</th>
+            <th style="text-align:right">Value (₹)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" style="text-align:right;font-weight:700">Total</td>
+            <td id="logTotal" style="text-align:right">0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =============== Hub KPIs ================== */
+function readLS(key, fallback){ try{ const v=JSON.parse(localStorage.getItem(key)||'null'); return v ?? fallback; }catch{ return fallback; } }
+
+function loadHubStats(){
+  // Stock
+  const stock = readLS('pharma_stock_json', []);
+  const low = stock.filter(s => (s.qty||0) <= 2).length;
+  const near = stock.filter(s => isNearExpiry(s.exp)).length;
+  setText('k_stock', stock.length);
+  setText('k_low', low);
+  setText('k_exp', near);
+
+  // Sales today
+  const salesToday = parseInt(localStorage.getItem('pharma_sales_today')||'0',10);
+  setText('k_salesToday', salesToday);
+
+  // Purchases (this month)
+  const purchMonth = parseInt(localStorage.getItem('pharma_purchases_month')||'0',10);
+  setText('k_purchasesMonth', purchMonth);
+
+  // Returns this month
+  const returns = readLS('pharma_returns_json', []);
+  const month = new Date().toISOString().slice(0,7);
+  const retMonth = returns.filter(r => (r.date||'').startsWith(month));
+  const retValue = retMonth.reduce((a,r)=>a + (+r.total||0), 0);
+  setText('k_returnsMonth', retMonth.length);
+  setText('k_returnsValue', '₹' + retValue.toFixed(2));
+}
+
+function isNearExpiry(mmYY){
+  if(!mmYY) return false;
+  const [m,y]=mmYY.split('/').map(n=>parseInt(n,10));
+  const d=new Date(2000+y,(m-1)||0,1);
+  const today=new Date();
+  const diffMonths=(d.getFullYear()-today.getFullYear())*12 + (d.getMonth()-today.getMonth());
+  return diffMonths <= 2;
+}
+
+function setText(id,val){ const el=document.getElementById(id); if(el) el.textContent=val; }
+
+loadHubStats();
+window.addEventListener('storage', loadHubStats);
+if("serviceWorker" in navigator){navigator.serviceWorker.register("./service-worker.js");}
+
+/* =============== Returns Log Modal ================== */
+const modalBackdrop = document.getElementById('modalWrap');
+
+function openLog(){
+  const m = document.getElementById('logMonth');
+  if(!m.value) m.value = new Date().toISOString().slice(0,7);
+  refreshLog();
+  modalBackdrop.classList.add('show');
+  modalBackdrop.setAttribute('aria-hidden','false');
+}
+
+function closeLog(){
+  modalBackdrop.classList.remove('show');
+  modalBackdrop.setAttribute('aria-hidden','true');
+}
+
+function refreshLog(){
+  const month = document.getElementById('logMonth').value || new Date().toISOString().slice(0,7);
+  const rows = readLS('pharma_returns_json', []).filter(r => (r.date||'').startsWith(month));
+  const tb = document.querySelector('#logTable tbody'); tb.innerHTML='';
+  let total=0;
+  rows.slice().reverse().forEach(r=>{
+    const dt = new Date(r.date).toLocaleString();
+    total += (+r.total||0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${dt}</td>
+      <td>${r.rtype==='sales'?'Sales Return':'Purchase Return'}</td>
+      <td>${r.ref||'-'}</td>
+      <td>${r.party||'-'}</td>
+      <td style="text-align:right">${(+r.total||0).toFixed(2)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+  document.getElementById('logTotal').textContent = total.toFixed(2);
+}
+
+/* Click outside modal to close */
+modalBackdrop.addEventListener('click', (e)=>{ if(e.target===modalBackdrop) closeLog(); });
+
+/* Escape to close */
+window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeLog(); });
+<script src="/scripts/barcode.js?v=8.4.3"></script>
+<script src="/scripts/seed-and-diagnostics.js?v=1.2"></script>
+</body></html>

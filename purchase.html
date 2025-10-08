@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Purchase · Pharmacy · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="./config.js"></script>
+<style>
+:root{
+  --bg-gradient:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);
+  --mint:#D6E5DD;--lav:#DED8F2;--peach:#FFE8D9;--card:#fff;--ink:#0f172a;
+  --muted:#475569;--primary:#139a5b;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.08)
+}
+:root{--header-tint:#DED8F2;--header-tint-rgba:222,216,242;--banner-tint:#D6E5DD;--banner-tint-rgba:214,229,221}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(var(--header-tint-rgba),.7);border:1px solid #0001;border-radius:12px;margin-top:10px;box-shadow:var(--shadow);}
+.header .logo{height:40px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+.btn:hover{background:#f1f5f9}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:var(--banner-tint)}
+.banner img{width:100%;transform:scale(.65);display:block;border-radius:var(--r);mix-blend-mode:multiply;opacity:.95}
+.banner::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(var(--banner-tint-rgba),.3),rgba(var(--banner-tint-rgba),.3))}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0 14px}
+@media print{
+  body{background:#fff;color:#000;margin:0}
+  .wrap,.header,.banner,.footer{display:none}
+  #printArea{display:block;padding:12mm}
+  .a4{width:210mm;min-height:297mm;margin:auto}
+  .bill{font:13px/1.45 system-ui;color:#000}
+  .bill table{width:100%;border-collapse:collapse}
+  .bill th,.bill td{border:1px solid #000;padding:4px}
+  .bill h2{margin:0 0 4px}
+}
+#printArea{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <img class="logo" src="./assets/logo.png" alt="logo">
+    <div>
+      <div style="font-weight:700;font-size:18px">Purchases (Distributor GST)</div>
+      <div style="font-size:13px;color:var(--muted)">Adds stock to Inventory · <b>barcode-ready</b></div>
+    </div>
+    <div class="row" style="gap:6px"><a class="btn" href="./pharmacy.html">DRUVHI MEDICALS</a><a class="btn" href="./index.html">Home</a></div>
+  </div>
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <div class="card" style="background:var(--mint)">
+    <div class="row">
+      <div style="flex:1"><label>Distributor</label><input id="vendor" class="input" placeholder="SRI VENKATASAI AGENCIES"></div>
+      <div style="flex:1"><label>Invoice No</label><input id="inv" class="input"></div>
+      <div style="flex:0 0 180px"><label>Date</label><input id="pdate" class="input" type="date"></div>
+      <div style="flex:0 0 220px;align-self:end"><button class="btn primary" onclick="printBill()">🖨️ Print GST Invoice</button></div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--lav)">
+    <h3>Add Product to Purchase</h3>
+    <div class="row">
+      <div style="flex:1"><input id="pname" class="input" placeholder="Product Name"></div>
+      <div style="flex:0 0 90px"><input id="ppack" class="input" placeholder="Pack"></div>
+      <div style="flex:0 0 100px"><input id="pbatch" class="input" placeholder="Batch"></div>
+      <div style="flex:0 0 100px"><input id="pexp" class="input" placeholder="MM/YY"></div>
+      <div style="flex:0 0 80px"><input id="phsn" class="input" placeholder="HSN" value="30049099"></div>
+      <div style="flex:0 0 90px"><input id="pgst" class="input" placeholder="GST%" type="number" value="12"></div>
+      <div style="flex:0 0 80px"><input id="pmrp" class="input" placeholder="MRP" type="number"></div>
+      <div style="flex:0 0 80px"><input id="prate" class="input" placeholder="Rate" type="number"></div>
+      <div style="flex:0 0 80px"><input id="pqty" class="input" placeholder="Qty" type="number"></div>
+      <div style="flex:0 0 200px;align-self:end" class="row">
+        <button class="btn primary" onclick="addRow()">Add</button>
+        <!-- scanner button works across app -->
+        <button class="btn" id="scanPurch" data-scan data-scan-target="#pname">Scan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--peach)">
+    <table class="table" id="ptable">
+      <thead><tr><th>#</th><th>Product</th><th>Pack</th><th>Batch</th><th>EXP</th><th>HSN</th><th>GST%</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="9" class="total">Grand Total</td><td id="gtotal">0.00</td></tr></tfoot>
+    </table>
+    <div class="row" style="justify-content:flex-end;margin-top:8px;gap:8px"><button class="btn" onclick="clearAll()">Clear</button></div>
+  </div>
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+<div id="printArea"></div>
+
+<script>
+let STOCK=[], PURCH=[];
+function loadStock(){ try{STOCK=JSON.parse(localStorage.getItem('pharma_stock_json')||'[]')}catch{STOCK=[]} }
+loadStock();
+
+function addRow(){
+  const r={ name:v('pname'),pack:v('ppack'),batch:v('pbatch'),exp:v('pexp'),
+    hsn:v('phsn'),gst:+v('pgst')||0,rate:+v('prate')||0,qty:+v('pqty')||0,mrp:+v('pmrp')||0 };
+  if(!r.name||!r.batch||!r.exp||!r.qty){ alert('Missing fields'); return; }
+  PURCH.push(r); updateStock(r); render();
+  ['pname','ppack','pbatch','pexp','phsn','pgst','pmrp','prate','pqty'].forEach(id=>s(id,''));
+}
+
+function fillFromBarcode(code){
+  let it = STOCK.find(s=> (s.barcode||`${s.name}|${s.batch}`)===code );
+  if(!it && code.includes('|')){
+    const [nm,bt]=code.split('|');
+    it = STOCK.find(s=>eqi(s.name,nm) && s.batch===bt);
+  }
+  if(it){
+    s('pname',it.name); s('ppack',it.pack||''); s('pbatch',it.batch); s('pexp',it.exp);
+    s('pmrp',it.mrp); s('prate',it.rate||it.mrp); s('pqty','1');
+  }else{
+    s('pname',code); s('pqty','1');
+  }
+}
+
+function updateStock(it){
+  const i=STOCK.findIndex(s=>eqi(s.name,it.name) && s.batch===it.batch);
+  if(i>=0){ STOCK[i].qty+=it.qty; STOCK[i].mrp=it.mrp; STOCK[i].rate=it.rate; STOCK[i].pack=it.pack; STOCK[i].exp=it.exp; }
+  else STOCK.push({name:it.name,pack:it.pack,batch:it.batch,exp:it.exp,qty:it.qty,mrp:it.mrp,rate:it.rate, barcode:`${it.name}|${it.batch}`});
+  persistStock();
+}
+function render(){
+  const tb=q('#ptable tbody'); tb.innerHTML='';
+  let t=0;
+  PURCH.forEach((r,i)=>{ const amt=r.qty*r.rate; t+=amt;
+    tb.innerHTML+=`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.pack}</td><td>${r.batch}</td><td>${r.exp}</td><td>${r.hsn}</td><td>${r.gst}</td><td>${r.rate}</td><td>${r.qty}</td><td>${amt.toFixed(2)}</td></tr>`;
+  });
+  q('#gtotal').textContent=t.toFixed(2);
+}
+function printBill(){
+  if(!PURCH.length)return;
+  const vndr=v('vendor')||'SRI VENKATASAI AGENCIES',
+        inv=v('inv')||('INV'+Date.now().toString().slice(-6)),
+        date=v('pdate')||new Date().toISOString().slice(0,10);
+  const total=+q('#gtotal').textContent||0,
+        gstSplit={5:0,12:0,18:0,28:0};
+  PURCH.forEach(r=>gstSplit[r.gst]=(gstSplit[r.gst]||0)+(r.qty*r.rate));
+  const html=`<div class="a4 bill"><h2>${vndr}</h2><div>Pharmaceutical Distributor</div>
+  <div><b>Invoice No:</b> ${inv} &nbsp; <b>Date:</b> ${date}</div><hr>
+  <table><thead><tr><th>#</th><th>Product</th><th>Pack</th><th>Batch</th><th>Exp</th><th>HSN</th><th>GST%</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
+  ${PURCH.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.pack}</td><td>${r.batch}</td><td>${r.exp}</td><td>${r.hsn}</td><td>${r.gst}</td><td>${r.rate.toFixed(2)}</td><td>${r.qty}</td><td>${(r.qty*r.rate).toFixed(2)}</td></tr>`).join('')}
+  </tbody></table>
+  <div style="text-align:right;margin-top:6px"><b>Total:</b> ${total.toFixed(2)}</div>
+  <div><b>GST Breakup:</b> 5% ₹${gstSplit[5].toFixed(2)} &nbsp; 12% ₹${gstSplit[12].toFixed(2)} &nbsp; 18% ₹${gstSplit[18].toFixed(2)} &nbsp; 28% ₹${gstSplit[28].toFixed(2)}</div>
+  <hr><div style="text-align:center;font-size:12px">Bank: UNION BANK OF INDIA · A/C 191215140000006 · IFSC: UBIN0819123</div>
+  <div style="text-align:center;font-size:11px">Powered by Onestop AI Services · © 2025 · All Rights Reserved</div></div>`;
+  q('#printArea').innerHTML=html;
+  window.print();
+  savePurchase({vendor:vndr,inv,date,total,items:PURCH});
+  clearAll();
+}
+function savePurchase(bill){
+  let arr=[];
+  try{arr=JSON.parse(localStorage.getItem('pharma_purchases_json')||'[]')}catch{}
+  arr.push(bill);
+  localStorage.setItem('pharma_purchases_json',JSON.stringify(arr));
+  const month=new Date().toISOString().slice(0,7);
+  const count=arr.filter(b=>b.date.startsWith(month)).length;
+  localStorage.setItem('pharma_purchases_month',count);
+  window.dispatchEvent(new StorageEvent('storage',{key:'pharma_purchases_month'}));
+}
+function persistStock(){ localStorage.setItem('pharma_stock_json',JSON.stringify(STOCK)); }
+function clearAll(){ PURCH=[]; render(); }
+function v(id){return document.getElementById(id).value}
+function s(id,val){document.getElementById(id).value=val}
+function q(sel){return document.querySelector(sel)}
+function eqi(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase();}
+</script>
+
+<!-- Engines + Wiring -->
+<script src="/scripts/qrcode.min.js?v=1.1"></script>
+<script src="/scripts/barcode.js?v=8.4.6"></script>
+<script src="/scripts/app-wiring.js?v=1.1"></script>
+<script src="/scripts/seed-and-diagnostics.js?v=1.3"></script>
+</body>
+</html>
