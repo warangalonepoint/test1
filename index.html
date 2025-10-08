@@ -13,78 +13,127 @@
   --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8; --teal:#C8F1EC;
   --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
   --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+  --ring:0 10px 28px rgba(17,24,39,.12);
 }
 *{box-sizing:border-box}
-body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
+body{margin:0;font:14px/1.45 system-ui, -apple-system, Segoe UI;background:var(--bg-gradient);color:var(--ink)}
 .wrap{max-width:1100px;margin:0 auto;padding:0 10px}
 
-/* Header (same as dashboard.html) */
-.header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:10px 12px;margin-top:10px;border-radius:12px;
-  background:#DED8F2B3;box-shadow:var(--shadow)
-}
+/* v8.1 header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-top:10px;border-radius:12px;background:#DED8F2B3;box-shadow:var(--shadow)}
 .header .logo{height:40px}
-
-/* Banner (same as dashboard.html) */
-.banner{margin:10px 0;border-radius:16px;overflow:hidden;background:#D6E5DD}
-.banner img{width:100%;transform:scale(.60);transform-origin:center;opacity:.95;mix-blend-mode:multiply}
-
-/* Cards grid */
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow)}
-
-/* Buttons & text */
-.btn{
-  display:inline-block;background:#fff;border:1px solid #cbd5e1;border-radius:20px;
-  padding:8px 14px;font-weight:700;text-decoration:none;color:inherit;text-align:center
-}
+.btn{display:inline-block;background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:8px 14px;font-weight:700;text-decoration:none;color:inherit;text-align:center}
 .btn.primary{background:var(--primary);color:#fff;border:none}
-.kpi{font-weight:800;font-size:22px}
-.small{color:var(--muted);font-size:12px}
-.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
 
-/* Filled pastel pills (same palette) */
+/* v8.1 banner */
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD;box-shadow:var(--shadow)}
+.banner img{width:100%;transform:scale(.60);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:4px}
+.kpi{
+  background:var(--card); border-radius:14px; padding:12px; box-shadow:var(--shadow); border:1px solid #0001;
+}
+.kpi h4{margin:0 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.kpi .v{font-weight:900;font-size:24px}
+
+/* module grid */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:12px}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);border:1px solid #0001}
+.card h3{margin-top:0}
+
+/* filled pastel pills */
 .pill{
-  display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;
-  line-height:1;margin:2px 4px;position:relative;z-index:2;border:1px solid transparent;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.04);
+  display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;line-height:1;margin:2px 4px;
+  border:1px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.04)
 }
 .pill.mint  { background:#C9F1D9 !important; color:#064E3B !important; border-color:#A7E5C4 !important; }
 .pill.lav   { background:#E3D9FF !important; color:#312E81 !important; border-color:#C9B8FF !important; }
 .pill.peach { background:#FFE0C8 !important; color:#7C2D12 !important; border-color:#FFC8A0 !important; }
 .pill.teal  { background:#B5EFE7 !important; color:#064E3B !important; border-color:#91E1D4 !important; }
 .pill.gray  { background:#E2E8F0 !important; color:#1E293B !important; border-color:#CBD5E1 !important; }
+
+.small{color:var(--muted);font-size:12px}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0}
+
+/* quick actions */
+.quick{display:flex;flex-wrap:wrap;gap:8px}
+.searchbar{display:flex;gap:8px;align-items:end;margin-top:10px}
+.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <!-- Header -->
   <div class="header">
     <div style="display:flex;align-items:center;gap:10px">
       <img class="logo" src="./assets/logo.png" alt="logo">
       <div>
-        <div style="font-weight:800;font-size:18px">Home</div>
-        <div class="small">Quick access to modules</div>
+        <div style="font-weight:800;font-size:18px">Clinic Home</div>
+        <div class="small">Welcome back — quick access & KPIs</div>
       </div>
     </div>
     <a class="btn" href="./settings.html">Settings</a>
   </div>
 
-  <!-- Banner -->
+  <!-- Banner v8.1 -->
   <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
 
-  <!-- Cards (match dashboard layout & links) -->
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi" style="background:var(--mint)">
+      <h4>Bookings Today</h4>
+      <div class="v" id="k_book">0</div>
+      <div class="small">Front desk · <a class="pill mint" href="./bookings.html">Book</a></div>
+    </div>
+    <div class="kpi" style="background:var(--lav)">
+      <h4>OPD Saved Today</h4>
+      <div class="v" id="k_opd">0</div>
+      <div class="small">Consultation · <a class="pill lav" href="./opd-records.html">Records</a></div>
+    </div>
+    <div class="kpi" style="background:var(--peach)">
+      <h4>Pending Lab Orders</h4>
+      <div class="v" id="k_lab">0</div>
+      <div class="small">Diagnostics · <a class="pill peach" href="./lab.html">Lab Hub</a></div>
+    </div>
+    <div class="kpi" style="background:var(--teal)">
+      <h4>Sales Today</h4>
+      <div class="v" id="k_sales">0</div>
+      <div class="small">Pharmacy · <a class="pill teal" href="./sales.html">POS</a></div>
+    </div>
+  </div>
+
+  <!-- Quick Jump -->
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 6px">Quick Actions</h3>
+    <div class="quick">
+      <a class="btn primary" href="./opd-live.html">Open OPD (Live)</a>
+      <a class="btn" href="./booking-status.html">Booking Status</a>
+      <a class="btn" href="./tv.html">TV Screen</a>
+      <a class="btn" href="./inventory.html">Inventory</a>
+      <a class="btn" href="./reports.html">Reports</a>
+    </div>
+    <div class="searchbar">
+      <div style="flex:1">
+        <label class="small">Find Patient by PID</label>
+        <input id="pidQuick" class="input" placeholder="P00042">
+      </div>
+      <a id="pidGo" class="btn" href="./opd-live.html">Go to OPD</a>
+    </div>
+  </div>
+
+  <!-- Modules -->
   <div class="grid">
     <div class="card" style="background:var(--mint)">
       <h3>Bookings <span class="pill mint">Live</span></h3>
-      <div class="kpi" id="k_today">0</div>
+      <div style="margin-bottom:8px" class="small">Create & manage appointments</div>
       <a class="btn primary" href="./bookings.html">Open</a>
     </div>
 
     <div class="card" style="background:var(--lav)">
       <h3>OPD <span class="pill lav">Consultation</span></h3>
-      <div style="margin-bottom:8px" class="small">Live sheet &amp; Records</div>
+      <div style="margin-bottom:8px" class="small">Live sheet & records</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a class="btn" href="./opd-live.html">OPD (Live)</a>
         <a class="btn" href="./opd-records.html">OPD Records</a>
@@ -110,8 +159,8 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(-
     <div class="card">
       <h3>Other <span class="pill gray">System</span></h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a class="btn" href="./booking-status.html">Booking Status</a>
         <a class="btn" href="./tv.html">TV</a>
+        <a class="btn" href="./booking-status.html">Front Desk</a>
         <a class="btn" href="./reports.html">Reports</a>
         <a class="btn" href="./test.html">Test Console</a>
       </div>
@@ -122,16 +171,66 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(-
 </div>
 
 <script>
-(async function(){
+const $=s=>document.querySelector(s);
+
+/* Quick PID jump */
+$('#pidGo').addEventListener('click', e=>{
+  const pid=($('#pidQuick').value||'').trim();
+  if(pid){
+    e.currentTarget.href = './opd-live.html?pid='+encodeURIComponent(pid.toUpperCase());
+  }else{
+    e.currentTarget.href = './opd-live.html';
+  }
+});
+
+/* KPIs: read Dexie + localStorage */
+(async function kpis(){
+  let db=null;
   try{
-    const db=new Dexie('clinicdb');await db.open().catch(()=>{});
-    const names=(db.tables||[]).map(t=>t.name);
+    db=new Dexie('clinicdb');
+    // be lenient: create if not present
+    db.version(1).stores({
+      bookings:'++id,date,ts,pid,token,status,patientName,contact',
+      opd:'++id,ts,pid,date'
+    });
+    await db.open().catch(()=>{});
+  }catch(e){}
+
+  async function refreshKPIs(){
     const today=new Date().toISOString().slice(0,10);
-    let bookings=0;
-    if(names.includes('bookings')) bookings = await db.table('bookings').where('date').equals(today).count();
-    document.getElementById('k_today').textContent = bookings;
-    db.close();
-  }catch(e){ console.warn(e); }
+    let bookings=0, opd=0, lab=0, sales=0;
+
+    try{
+      if(db && db.tables.map(t=>t.name).includes('bookings')){
+        bookings = await db.table('bookings').where('date').equals(today).count();
+      }
+    }catch{}
+
+    try{
+      if(db && db.tables.map(t=>t.name).includes('opd')){
+        const list = await db.table('opd').where('date').equals(today).toArray();
+        opd = list.length;
+      }
+    }catch{}
+
+    try{
+      const q = JSON.parse(localStorage.getItem('lab_orders_queue')||'[]');
+      lab = Array.isArray(q) ? q.length : 0;
+    }catch{}
+
+    try{
+      const n = +localStorage.getItem('pharma_sales_today')||0;
+      sales = n;
+    }catch{}
+
+    $('#k_book').textContent = bookings;
+    $('#k_opd').textContent  = opd;
+    $('#k_lab').textContent  = lab;
+    $('#k_sales').textContent= sales;
+  }
+
+  await refreshKPIs();
+  setInterval(refreshKPIs, 10000);
 })();
 </script>
 </body>
