@@ -126,6 +126,30 @@ th{background:#f1f5f9}
     <div id="msg" class="alert"></div>
   </div>
 
+  <!-- PIN Management (ADDED) -->
+  <div class="card" style="background:var(--peach)">
+    <h3>PIN Management</h3>
+    <div class="small" style="margin-bottom:6px">Set/change login PINs for each workspace. These are used on the home screen before opening a module.</div>
+    <div class="row">
+      <div style="flex:0 0 220px">
+        <label>Dashboard PIN</label>
+        <input id="pin_dashboard" class="input" placeholder="4–8 digits">
+      </div>
+      <div style="flex:0 0 220px">
+        <label>Supervisor PIN</label>
+        <input id="pin_supervisor" class="input" placeholder="4–8 digits">
+      </div>
+      <div style="flex:0 0 220px">
+        <label>Front Office PIN</label>
+        <input id="pin_frontoffice" class="input" placeholder="4–8 digits">
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn primary" onclick="savePins()">Save PINs</button>
+      <button class="btn" onclick="resetPins()">Reset to Defaults</button>
+    </div>
+  </div>
+
   <!-- Demo / Diagnostics -->
   <div class="card" style="background:var(--peach)">
     <h3>Seed & Diagnostics</h3>
@@ -222,7 +246,40 @@ async function wipeAll(){
   setTimeout(()=>location.reload(),600);
 }
 
+/* ====== PIN Management (ADDED) ====== */
+(function ensureDefaults(){
+  // Create defaults only if not present (aligns with index gate)
+  if(!localStorage.getItem('pin_dashboard'))  localStorage.setItem('pin_dashboard','1111');
+  if(!localStorage.getItem('pin_supervisor')) localStorage.setItem('pin_supervisor','2222');
+  if(!localStorage.getItem('pin_frontoffice'))localStorage.setItem('pin_frontoffice','3333');
+})();
+
+function loadPins(){
+  document.getElementById('pin_dashboard').value  = localStorage.getItem('pin_dashboard')  || '1111';
+  document.getElementById('pin_supervisor').value = localStorage.getItem('pin_supervisor') || '2222';
+  document.getElementById('pin_frontoffice').value= localStorage.getItem('pin_frontoffice')|| '3333';
+}
+function savePins(){
+  const d=document.getElementById('pin_dashboard').value.trim();
+  const s=document.getElementById('pin_supervisor').value.trim();
+  const f=document.getElementById('pin_frontoffice').value.trim();
+  const ok = (v)=>/^[0-9]{4,8}$/.test(v); // 4–8 digits
+  if(!ok(d)||!ok(s)||!ok(f)){ msg('Pins must be 4–8 digits'); return; }
+  localStorage.setItem('pin_dashboard', d);
+  localStorage.setItem('pin_supervisor', s);
+  localStorage.setItem('pin_frontoffice', f);
+  msg('PINs saved');
+}
+function resetPins(){
+  localStorage.setItem('pin_dashboard','1111');
+  localStorage.setItem('pin_supervisor','2222');
+  localStorage.setItem('pin_frontoffice','3333');
+  loadPins();
+  msg('PINs reset to defaults');
+}
+
 refreshCounts();
+loadPins();
 </script>
 
 <!-- Engines (kept consistent with rest of app) -->

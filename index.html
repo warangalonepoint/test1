@@ -75,7 +75,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
         <h3>Dashboard</h3>
         <div class="desc">KPIs · Collections · Lab income · Pharmacy sales · OPD insights</div>
         <div class="row">
-          <a class="btn primary" href="./dashboard.html">Open Dashboard</a>
+          <a class="btn primary" id="goDashboard" href="./dashboard.html">Open Dashboard</a>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
         <h3>Supervisor Hub</h3>
         <div class="desc">Access to Bookings, Booking Status (TV feed), OPD Records, Lab Hub & Pharmacy</div>
         <div class="row">
-          <a class="btn primary" href="./supervisor-hub.html">Open Supervisor Hub</a>
+          <a class="btn primary" id="goSupervisor" href="./supervisor-hub.html">Open Supervisor Hub</a>
         </div>
       </div>
 
@@ -93,7 +93,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
         <h3>Front Office</h3>
         <div class="desc">Bookings · Status updates · TV display control</div>
         <div class="row">
-          <a class="btn primary" href="./frontoffice.html">Open Front Office</a>
+          <a class="btn primary" id="goFrontOffice" href="./frontoffice.html">Open Front Office</a>
         </div>
       </div>
     </div>
@@ -117,6 +117,39 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
   }catch(e){
     // silent fallback
   }
+})();
+
+/* ==== PIN Gate (read-only here; change/reset only in settings.html) ==== */
+(function(){
+  const PINS = {
+    dashboard: { key: 'pin_dashboard', def: '1111', target: './dashboard.html', btn: 'goDashboard' },
+    supervisor:{ key: 'pin_supervisor', def: '2222', target: './supervisor-hub.html', btn: 'goSupervisor' },
+    frontoffice:{ key: 'pin_frontoffice', def: '3333', target: './frontoffice.html', btn: 'goFrontOffice' }
+  };
+
+  // Ensure defaults exist (only if not already set)
+  Object.values(PINS).forEach(p => {
+    if (!localStorage.getItem(p.key)) localStorage.setItem(p.key, p.def);
+  });
+
+  function askPin(role){
+    const saved = localStorage.getItem(PINS[role].key) || PINS[role].def;
+    const pin = window.prompt(`Enter ${role.replace(/^[a-z]/,m=>m.toUpperCase())} PIN`);
+    if (pin == null) return false;
+    if (pin === saved) return true;
+    alert('Incorrect PIN');
+    return false;
+  }
+
+  Object.entries(PINS).forEach(([role, cfg])=>{
+    const el = document.getElementById(cfg.btn);
+    if(!el) return;
+    el.addEventListener('click', (e)=>{
+      // Require PIN before navigating
+      e.preventDefault();
+      if (askPin(role)) window.location.href = cfg.target;
+    });
+  });
 })();
 </script>
 </body>
