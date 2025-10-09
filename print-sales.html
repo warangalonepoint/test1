@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bill Invoice · DRUVHI MEDICALS (A5)</title>
+<style>
+@page{ size:A5 portrait; margin:6mm; }
+*{ box-sizing:border-box }
+body{ margin:0; font:13px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; color:#000; background:#fff; }
+.sheet{ max-width:148mm; margin:0 auto; background:#fff; }
+.wrap{ padding:6mm; }
+
+/* Header */
+.hdr{ display:flex; gap:10px; align-items:flex-start; border-bottom:1px solid #000; padding-bottom:6px; }
+.hleft{ flex:1; }
+.hright{ width:62mm; }
+.logo{ width:46px; height:46px; object-fit:contain; float:left; margin-right:6px; }
+.title{ font-weight:800; font-size:18px; line-height:1.1; }
+.sub{ font-size:12px; margin-top:2px; }
+.meta-grid{ display:grid; grid-template-columns:70px 1fr; gap:2px 6px; font-size:12px; margin-top:4px; }
+
+/* Lines table */
+.table{ width:100%; border-collapse:collapse; margin-top:8px; }
+.table th,.table td{ border:1px solid #000; padding:4px; text-align:left; }
+.table th{ font-weight:700; }
+.right{ text-align:right; }
+
+/* Totals */
+.kv{ margin-top:6px; display:grid; grid-template-columns:1fr 70mm; }
+.kv .box{ border:1px solid #000; padding:4px; }
+.kvrow{ display:flex; justify-content:space-between; gap:6px; }
+.bold{ font-weight:800; }
+
+/* Footer / terms */
+.footer{ margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; font-size:12px; }
+.sign{ text-align:right; min-width:58mm; }
+.hr{ border-top:1px solid #000; margin-top:24px; padding-top:2px; }
+.terms{ font-size:11px; margin-top:6px; border-top:1px dashed #111; padding-top:6px; }
+.badge{ border:1px solid #000; padding:1px 8px; border-radius:999px; font-size:11px; float:right; }
+
+/* Screen helpers */
+@media screen{
+  body{ background:#f7fafc; }
+  .sheet{ box-shadow:0 10px 30px rgba(0,0,0,.08); border:1px solid #e5e7eb; border-radius:12px; }
+  .topbar{ display:flex; justify-content:flex-end; gap:8px; padding:10px; }
+  .btn{ border:1px solid #cbd5e1; background:#fff; border-radius:10px; padding:6px 12px; font-weight:700; cursor:pointer; }
+}
+</style>
+</head>
+<body>
+<div class="topbar" aria-hidden="true">
+  <button class="btn" onclick="window.print()">Print</button>
+</div>
+
+<div class="sheet">
+  <div class="wrap" id="paper">
+
+    <!-- HEADER -->
+    <div class="hdr">
+      <div class="hleft">
+        <img class="logo" src="../assets/logo.png" alt="logo" onerror="this.style.display='none'">
+        <div class="title" id="shopTitle">DRUVHI MEDICALS</div>
+        <div class="sub" id="shopSub">#2-1-45, Saraswathi Nagar, Gopalpur, Hanamkonda · Ph: 8340840340 · DL No: TS/WLU/2021-74472</div>
+        <div class="meta-grid" id="shopMeta">
+          <div>Email:</div><div id="shopMail">—</div>
+        </div>
+      </div>
+
+      <div class="hright">
+        <div class="badge" id="copyTag">ORIGINAL</div>
+        <div class="meta-grid">
+          <div>Patient:</div><div id="patient">Walk-in</div>
+          <div>Address:</div><div id="paddr">—</div>
+          <div>Dr Name:</div><div id="doctor">—</div>
+          <div>Invoice #:</div><div id="invId">—</div>
+          <div>Date:</div><div id="invDate">—</div>
+          <div>Time:</div><div id="invTime">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINES -->
+    <table class="table" id="lines">
+      <thead>
+        <tr>
+          <th style="width:28px">S.No</th>
+          <th>Product Name</th>
+          <th style="width:45px">Pack</th>
+          <th style="width:70px">Batch</th>
+          <th style="width:50px">EXP</th>
+          <th style="width:36px">Qty</th>
+          <th style="width:70px">MRP / Each</th>
+          <th style="width:70px">Amount</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- TOTALS -->
+    <div class="kv">
+      <div class="box">
+        <div class="terms">
+          <div><b>Thank you for visit. Get well soon</b></div>
+          <div><b>Terms &amp; Conditions:</b> Goods once sold will not be taken back or exchanged after 7 days. All disputes subject to jurisdiction only.</div>
+        </div>
+      </div>
+      <div class="box">
+        <div class="kvrow"><div>Sub Total</div><div class="bold" id="subTotal">0.00</div></div>
+        <div class="kvrow"><div>Discount</div><div class="bold" id="disc">0.00</div></div>
+        <div class="kvrow hr"><div>Grand Total</div><div class="bold" id="grandTotal">0.00</div></div>
+      </div>
+    </div>
+
+    <!-- SIGN -->
+    <div class="footer">
+      <div></div>
+      <div class="sign">
+        <div>For <b>DRUVHI MEDICALS</b></div>
+        <div style="height:26px"></div>
+        <div class="hr">Authorized Signatory</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---- Load pharmacy header from config (optional) ---- */
+(async function header(){
+  try{
+    const r = await fetch('../config/pharmacy-config.json', {cache:'no-store'});
+    if(r.ok){
+      const c = await r.json();
+      document.getElementById('shopTitle').textContent = c.shopName || c.clinicName || 'DRUVHI MEDICALS';
+      const sub = [c.address, c.phone, c.dlno].filter(Boolean).join(' · ');
+      if(sub) document.getElementById('shopSub').textContent = sub;
+      if(c.email) document.getElementById('shopMail').textContent = c.email;
+    }
+  }catch{}
+})();
+
+/* ---- Pull bill payload ---- */
+function readPayload(){
+  // 1) from ?data=
+  try{
+    const u = new URL(location.href);
+    const j = u.searchParams.get('data');
+    if(j) return JSON.parse(decodeURIComponent(j));
+  }catch{}
+  // 2) from sales_print_payload
+  try{
+    const j = localStorage.getItem('sales_print_payload');
+    if(j) return JSON.parse(j);
+  }catch{}
+  // 3) last from pharma_sales_json
+  try{
+    const arr = JSON.parse(localStorage.getItem('pharma_sales_json')||'[]');
+    if(Array.isArray(arr) && arr.length) return arr[arr.length-1];
+  }catch{}
+  return null;
+}
+
+function money(n){ n=+n||0; return n.toFixed(2); }
+
+(function fill(){
+  const d = readPayload();
+  if(!d){
+    document.getElementById('paper').innerHTML = '<div style="padding:12px">No sale data found.</div>';
+    return;
+  }
+
+  const dt = d.date ? new Date(d.date) : new Date();
+  document.getElementById('patient').textContent = d.buyer || 'Walk-in';
+  document.getElementById('paddr').textContent = d.address || '—';
+  document.getElementById('doctor').textContent = d.doctor || d.drName || '—';
+  document.getElementById('invId').textContent = d.id || '—';
+  document.getElementById('invDate').textContent = dt.toLocaleDateString();
+  document.getElementById('invTime').textContent = dt.toLocaleTimeString();
+
+  const tb = document.querySelector('#lines tbody'); tb.innerHTML='';
+  let sub = 0;
+  (d.items||[]).forEach((r,i)=>{
+    const qty = +r.qty || 0;
+    const mrp = +r.mrp || 0;
+    const amt = qty * mrp;
+    sub += amt;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${r.name||''}</td>
+      <td class="right">${r.pack||r.packSize||1}</td>
+      <td>${r.batch||''}</td>
+      <td>${r.exp||''}</td>
+      <td class="right">${qty}</td>
+      <td class="right">${money(mrp)}</td>
+      <td class="right">${money(amt)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  const discVal = ('discValue' in d) ? (+d.discValue||0)
+                   : (d.discountPct ? (sub*(+d.discountPct/100)) : (+d.discount||0));
+  const grand = sub - discVal;
+
+  document.getElementById('subTotal').textContent = money(sub);
+  document.getElementById('disc').textContent = money(discVal);
+  document.getElementById('grandTotal').textContent = money(grand);
+})();
+
+/* ---- Auto print ---- */
+(function autoprint(){
+  const u = new URL(location.href);
+  if(u.searchParams.get('print') === '1'){
+    setTimeout(()=>window.print(), 250);
+  }
+})();
+</script>
+</body>
+</html>
