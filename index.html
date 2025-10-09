@@ -8,10 +8,14 @@
 <link rel="stylesheet" href="./styles.css"/>
 <style>
 :root{
-  --bg:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --bg:linear-gradient(145deg,#f9fafb,#f7f5ff,#fff9f3);
   --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
   --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
-  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8;
+
+  /* 30% brighter versions of v8.1 pastel shades */
+  --mint:#DFFAF0;
+  --lav:#F6F2FF;
+  --peach:#FFF7EF;
 }
 
 /* Base */
@@ -67,7 +71,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
     <h3 style="margin:0 0 8px">Choose a workspace</h3>
     <div class="grid3">
       <!-- Dashboard -->
-      <div class="tile">
+      <div class="tile" style="background:var(--lav)">
         <h3>Dashboard</h3>
         <div class="desc">KPIs · Collections · Lab income · Pharmacy sales · OPD insights</div>
         <div class="row">
@@ -76,7 +80,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
       </div>
 
       <!-- Supervisor Hub -->
-      <div class="tile">
+      <div class="tile" style="background:var(--peach)">
         <h3>Supervisor Hub</h3>
         <div class="desc">Access to Bookings, Booking Status (TV feed), OPD Records, Lab Hub & Pharmacy</div>
         <div class="row">
@@ -85,7 +89,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
       </div>
 
       <!-- Front Office -->
-      <div class="tile">
+      <div class="tile" style="background:var(--lav)">
         <h3>Front Office</h3>
         <div class="desc">Bookings · Status updates · TV display control</div>
         <div class="row">
