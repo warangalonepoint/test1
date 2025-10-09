@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Lab Records · Clinic PWA</title>
+<link rel="stylesheet" href="./styles.css"/>
+<style>
+body{margin:0;font:14px/1.45 system-ui;background:#FFF7EF}
+.wrap{max-width:1000px;margin:0 auto;padding:10px}
+.header{display:flex;align-items:center;gap:10px;background:#DED8F2b3;margin-top:10px;border-radius:12px;padding:10px}
+.header .logo{height:36px}
+
+/* banner (locked style) */
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+
+.card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);margin-top:12px}
+.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.btn{background:#17B26A;color:#fff;border:none;border-radius:20px;padding:8px 14px;font-weight:700;cursor:pointer}
+.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <a class="btn" style="background:#fff;color:#111;border:1px solid #cbd5e1" href="./lab-hub.html">← Back</a>
+    <img class="logo" src="./assets/logo.png" alt="">
+    <strong>Lab Records</strong>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner"><img src="./assets/banner.png" alt="Lab Banner"></div>
+
+  <div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+      <div style="flex:1"><label>Search by PID or Phone</label><input id="q" class="input" placeholder="P00123 / 9876…"></div>
+      <button class="btn" id="search">Search</button>
+      <span class="badge" id="count">0</span>
+    </div>
+    <table class="table" id="tbl">
+      <thead><tr><th>Date/Time</th><th>PID</th><th>Name</th><th>Tests</th><th>Total</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* Minimal local-storage viewer for completed lab orders */
+const STORE='lab_records_json'; // append to this from your lab workflow when results are done
+const $=s=>document.querySelector(s);
+let ALL=[];
+function load(){ try{const a=JSON.parse(localStorage.getItem(STORE)||'[]'); return Array.isArray(a)?a:[]}catch{return[]} }
+function render(list=ALL){
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  list.forEach(r=>{
+    const dt=new Date(r.ts||Date.now()).toLocaleString();
+    const tests=(r.items||[]).map(x=>x.test||x.name).join(', ');
+    const total=r.total || (r.items||[]).reduce((s,x)=>s+(+x.price||0),0);
+    tb.insertAdjacentHTML('beforeend', `<tr><td>${dt}</td><td>${r.pid||''}</td><td>${r.name||''}</td><td>${tests}</td><td>₹ ${(total||0).toFixed(0)}</td></tr>`);
+  });
+  $("#count").textContent=list.length;
+}
+document.getElementById('search').onclick=()=>{
+  const q=($("#q").value||'').trim().toUpperCase();
+  if(!q) return render(ALL);
+  const out=ALL.filter(r=>(r.pid||'').toUpperCase().includes(q) || (r.phone||'').includes(q));
+  render(out);
+};
+ALL=load().sort((a,b)=>(b.ts||0)-(a.ts||0));
+render();
+</script>
+</body>
+</html>

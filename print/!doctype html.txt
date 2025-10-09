@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Print · Lab Report</title>
+<style>
+@page{size:A4;margin:12mm}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.45 system-ui;color:#0f172a;background:#fff}
+.wrap{max-width:800px;margin:0 auto;padding:12mm}
+.hdr{display:flex;align-items:center;gap:12px;border-bottom:2px solid #0f172a20;padding-bottom:8px}
+.hdr .logo{height:52px}
+.hdr .t{font-weight:900;font-size:20px}
+.hdr .sub{font-size:12px;color:#475569}
+.banner{margin:8px 0 12px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb}
+.banner img{width:100%;display:block;transform:scale(.64);opacity:.95;mix-blend-mode:multiply}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.box{flex:1;border:1px solid #e5e7eb;border-radius:10px;padding:8px}
+.labtab{width:100%;border-collapse:collapse;margin-top:10px}
+.labtab th,.labtab td{border:1px solid #94a3b8;padding:6px;text-align:left}
+.labtab th{background:#f1f5f9}
+.sign{margin-top:18px;display:flex;justify-content:flex-end}
+.small{font-size:12px;color:#64748b}
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="hdr">
+    <img class="logo" src="./assets/logo.png" onerror="this.style.display='none'">
+    <div>
+      <div class="t" id="labTitle">Charan Clinical Laboratory</div>
+      <div class="sub" id="labSub">Quality Diagnostics · Same-day Reports</div>
+    </div>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt=""></div>
+
+  <div class="row">
+    <div class="box"><b>Pt Name:</b> <span id="pname">—</span></div>
+    <div class="box" style="flex:0 0 140px"><b>Sex:</b> <span id="psex">—</span></div>
+    <div class="box" style="flex:0 0 160px"><b>Age:</b> <span id="page">—</span></div>
+  </div>
+  <div class="row">
+    <div class="box"><b>Ref By:</b> <span id="pref">—</span></div>
+    <div class="box" style="flex:0 0 220px"><b>Date:</b> <span id="pdate">—</span></div>
+  </div>
+
+  <table class="labtab">
+    <thead><tr><th style="width:45%">Parameters</th><th style="width:25%">Results</th><th>Normal Value</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <div class="sign"><div class="small">LAB TECHNICIAN</div></div>
+  <div class="small" style="text-align:center;margin-top:8px">Powered by Onestop AI Services</div>
+</div>
+
+<script>
+const Q = s=>document.querySelector(s);
+function getData(){
+  try{
+    const u=new URL(location.href);
+    const j=u.searchParams.get('data');
+    if(j) return JSON.parse(decodeURIComponent(j));
+  }catch{}
+  try{ return JSON.parse(localStorage.getItem('last_lab_report')||'null') }catch{ return null; }
+}
+const d=getData()||{};
+Q('#pname').textContent = d.patient || '—';
+Q('#psex').textContent  = d.sex || '—';
+Q('#page').textContent  = d.age ? (d.age+' Y') : '—';
+Q('#pref').textContent  = d.ref || '—';
+Q('#pdate').textContent = d.date || new Date().toISOString().slice(0,10);
+
+const ranges = {
+  hb:'(12 – 18 %)',
+  rbc:'(4.2 – 5.2 %)',
+  wbc:'(4,500 – 11,000/cu.mm)',
+  pcv:'(37 – 47 %)',
+  platelet:'(1.5 – 4.5 Lakhs/cu.mm)',
+  neutro:'(45 – 70 %)',
+  lymph:'(20 – 40 %)',
+  eos:'(02 – 10 %)',
+  mono:'(0 – 6 %)',
+  baso:'(0 – 1 %)',
+  esr:'(0 – 10 mm)'
+};
+const labels = {
+  hb:'Hemoglobin', rbc:'Erythrocytes', wbc:'WBC TC', pcv:'PCV', platelet:'Platelet Count',
+  neutro:'Neutrophils', lymph:'Lymphocytes', eos:'Eosinophil', mono:'Monocytes', baso:'Basophile', esr:'ESR'
+};
+const order = ['hb','rbc','wbc','pcv','platelet','neutro','lymph','eos','mono','baso','esr'];
+const res = d.results||{};
+const tb = document.getElementById('tbody');
+order.forEach(k=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML = `<td>${labels[k]}</td><td>${res[k]??''}</td><td>${ranges[k]||''}</td>`;
+  tb.appendChild(tr);
+});
+
+if (new URL(location.href).searchParams.get('print')==='1'){
+  setTimeout(()=>window.print(), 200);
+}
+</script>
+</body>
+</html>

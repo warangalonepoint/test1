@@ -145,12 +145,18 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
     const el = document.getElementById(cfg.btn);
     if(!el) return;
     el.addEventListener('click', (e)=>{
-      // Require PIN before navigating
-      e.preventDefault();
+      e.preventDefault();                 // require PIN before navigating
       if (askPin(role)) window.location.href = cfg.target;
     });
   });
 })();
+</script>
+
+<script>
+/* Service worker registration */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/service-worker.js").catch(console.error);
+}
 </script>
 </body>
 </html>

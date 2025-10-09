@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Lab Hub · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<style>
+:root{
+  --bg:linear-gradient(145deg,#f9fafb,#f7f5ff,#fff9f3);
+  --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+  --mint:#DFFAF0; --lav:#F6F2FF; --peach:#FFF7EF;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px}
+.header .logo{height:40px}
+.header .title{font-weight:800;font-size:18px}
+.header .sub{font-size:12px;color:var(--muted)}
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tile{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column}
+.tile h3{margin:0 0 6px}
+.tile .desc{color:var(--muted);font-size:13px;margin-bottom:10px}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:8px 14px;font-weight:700;cursor:pointer;text-align:center}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:#64748b;margin:18px 0}
+.back{background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:6px 10px;font-weight:700;text-decoration:none;color:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a class="back" href="./dashboard.html">←</a>
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div class="title">Lab Hub</div>
+        <div class="sub">Diagnostics · Tests · Records</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="banner"><img src="./assets/banner.png" alt="Lab Banner"></div>
+
+  <div class="card" style="background:var(--mint)">
+    <h3 style="margin:0 0 8px">Lab Operations</h3>
+    <div class="grid3">
+      <div class="tile" style="background:var(--lav)">
+        <h3>Lab Console</h3>
+        <div class="desc">Run daily diagnostics, sample entries, and quick reports.</div>
+        <div class="row"><a class="btn primary" href="./lab.html">Open Lab Console</a></div>
+      </div>
+
+      <div class="tile" style="background:var(--peach)">
+        <h3>Lab Tests</h3>
+        <div class="desc">Manage test catalogue, pricing, and turnaround times.</div>
+        <div class="row"><a class="btn primary" href="./lab-tests.html">Manage Tests</a></div>
+      </div>
+
+      <div class="tile" style="background:var(--lav)">
+        <h3>Lab Records</h3>
+        <div class="desc">Access completed reports and patient test history.</div>
+        <div class="row"><a class="btn primary" href="./lab-records.html">View Records</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong></div>
+</div>
+</body>
+</html>

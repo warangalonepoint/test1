@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Lab Tests · Parameter Entry</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles.css"/>
+<style>
+:root{
+  --bg:linear-gradient(145deg,#f4f8f6,#f3f0fa,#fff4ec);
+  --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#17B26A;
+  --r:16px; --shadow:0 6px 18px rgba(0,0,0,.06);
+  --mint:#E8F6ED; --lav:#F0EAFE; --peach:#FFF3E8;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:#DED8F2b3;border-radius:12px;box-shadow:var(--shadow);margin-top:10px}
+.header .logo{height:40px}
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:12px 0;background:#D6E5DD}
+.banner img{width:100%;transform:scale(.65);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.input,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border:none}
+.small{font-size:12px;color:#64748b}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+.table th{background:#f1f5f9}
+.param{display:grid;grid-template-columns:22px 1fr 180px 180px;gap:10px;align-items:center;margin:8px 0}
+.param .lab{font-weight:600}
+.footer{text-align:center;padding:14px 4px;font-size:13px;color:#64748b;margin:18px 0}
+.badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
+.stickbar{position:sticky;bottom:10px;display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div style="font-weight:700;font-size:18px">Lab Tests · Parameter Entry</div>
+        <div class="small">Select a test · Tick parameters · Enter results · Save/Print</div>
+      </div>
+    </div>
+    <a class="btn" href="./lab-hub.html">Back</a>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
+
+  <!-- Patient block -->
+  <div class="card" style="background:var(--mint)">
+    <div class="row">
+      <div style="flex:1 1 220px"><label>Patient Name</label><input id="pname" class="input" placeholder="Patient"></div>
+      <div style="flex:0 0 140px"><label>PID</label><input id="ppid" class="input" placeholder="P0001"></div>
+      <div style="flex:0 0 100px"><label>Sex</label>
+        <select id="psex" class="input"><option>—</option><option>Male</option><option>Female</option><option>Other</option></select>
+      </div>
+      <div style="flex:0 0 110px"><label>Age (Y)</label><input id="page" class="input" type="number" min="0"></div>
+      <div style="flex:1 1 220px"><label>Ref By</label><input id="pref" class="input" placeholder="Doctor / Self"></div>
+      <div style="flex:0 0 150px"><label>Date</label><input id="pdate" class="input" type="date"></div>
+    </div>
+  </div>
+
+  <!-- Parameters -->
+  <div class="card" style="background:var(--lav)">
+    <div class="row" style="align-items:end">
+      <div style="flex:1 1 260px">
+        <label>Select Test</label>
+        <select id="testSel" class="input"></select>
+      </div>
+      <div class="badge" id="pcount">0 params</div>
+      <button class="btn primary" id="btnAdd">Add to Report</button>
+    </div>
+
+    <div id="paramBox" style="margin-top:10px"></div>
+
+    <div class="stickbar" style="margin-top:10px">
+      <button class="btn" id="btnClear">Clear</button>
+      <button class="btn" id="btnSave">Save Record</button>
+      <button class="btn primary" id="btnPrint">Print</button>
+    </div>
+  </div>
+
+  <!-- Report preview -->
+  <div class="card" style="background:var(--peach)">
+    <h3 style="margin:0 0 8px">Report Preview</h3>
+    <table class="table" id="prevTable">
+      <thead><tr><th>Test</th><th>Parameter</th><th>Result</th><th>Normal Value</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
+</div>
+
+<script>
+/* ========= Test → Parameters (from poster + common ranges) ========= */
+const TEST_PARAMS = {
+  "CBP":[
+    {k:"hb",lab:"Hemoglobin",norm:"12 – 18 g/dL",unit:"g/dL"},
+    {k:"rbc",lab:"Erythrocytes",norm:"4.2 – 5.2 M/µL"},
+    {k:"wbc",lab:"WBC TC",norm:"4,500 – 11,000 /µL"},
+    {k:"pcv",lab:"PCV",norm:"37 – 47 %"},
+    {k:"plt",lab:"Platelet Count",norm:"1.5 – 4.5 Lakhs/µL"},
+    {k:"neu",lab:"Neutrophils",norm:"45 – 70 %"},
+    {k:"lym",lab:"Lymphocytes",norm:"20 – 40 %"},
+    {k:"eos",lab:"Eosinophil",norm:"02 – 10 %"},
+    {k:"mon",lab:"Monocytes",norm:"0 – 6 %"},
+    {k:"bas",lab:"Basophile",norm:"0 – 1 %"},
+    {k:"esr",lab:"ESR",norm:"0 – 10 mm/hr"}
+  ],
+  "CRP":[
+    {k:"crp",lab:"CRP",norm:"< 6 mg/L",unit:"mg/L"}
+  ],
+  "TYPHOID IgM IgG":[
+    {k:"ty_igm",lab:"Typhoid IgM",norm:"Negative"},
+    {k:"ty_igg",lab:"Typhoid IgG",norm:"Negative"}
+  ],
+  "CUE":[
+    {k:"ur_sp",lab:"Specific Gravity",norm:"1.005 – 1.030"},
+    {k:"ur_ph",lab:"pH",norm:"4.6 – 8.0"},
+    {k:"ur_prot",lab:"Protein",norm:"Negative"},
+    {k:"ur_sug",lab:"Sugar",norm:"Negative"},
+    {k:"ur_ket",lab:"Ketone",norm:"Negative"},
+    {k:"ur_bld",lab:"Blood",norm:"Negative"},
+    {k:"ur_wbc",lab:"Pus Cells",norm:"0 – 5 /HPF"},
+    {k:"ur_rbc",lab:"RBC",norm:"0 – 2 /HPF"}
+  ],
+  "RBS":[
+    {k:"rbs",lab:"Random Blood Sugar",norm:"< 140 mg/dL",unit:"mg/dL"}
+  ],
+  "TSB":[
+    {k:"tsb",lab:"Total Bilirubin",norm:"0.3 – 1.2 mg/dL",unit:"mg/dL"}
+  ],
+  "DENGUE IgM IgG":[
+    {k:"den_igm",lab:"Dengue IgM",norm:"Negative"},
+    {k:"den_igg",lab:"Dengue IgG",norm:"Negative"},
+    {k:"ns1",lab:"NS1 Antigen",norm:"Negative"}
+  ],
+  "MALARIA FOR Pv Pf":[
+    {k:"mal_pf",lab:"Malaria Pf",norm:"Negative"},
+    {k:"mal_pv",lab:"Malaria Pv",norm:"Negative"}
+  ],
+  "T3, T4, TSH":[
+    {k:"t3",lab:"T3",norm:"0.8 – 2.0 ng/mL"},
+    {k:"t4",lab:"T4",norm:"5.1 – 14.1 µg/dL"},
+    {k:"tsh",lab:"TSH",norm:"0.4 – 4.0 µIU/mL"}
+  ],
+  "URINE C/S AUTOMATED":[
+    {k:"cs_auto",lab:"Culture & Sensitivity (Automated)",norm:"No growth / Sensitive"}
+  ],
+  "URINE C/S CONVENTION":[
+    {k:"cs_conv",lab:"Culture & Sensitivity (Conventional)",norm:"No growth / Sensitive"}
+  ],
+  "LFT":[
+    {k:"tbil",lab:"Total Bilirubin",norm:"0.3 – 1.2 mg/dL"},
+    {k:"dbil",lab:"Direct Bilirubin",norm:"0.0 – 0.3 mg/dL"},
+    {k:"sgot",lab:"SGOT (AST)",norm:"< 40 U/L"},
+    {k:"sgpt",lab:"SGPT (ALT)",norm:"< 40 U/L"},
+    {k:"alp",lab:"Alkaline Phosphatase",norm:"44 – 147 U/L"},
+    {k:"tp",lab:"Total Protein",norm:"6.0 – 8.3 g/dL"},
+    {k:"alb",lab:"Albumin",norm:"3.5 – 5.0 g/dL"}
+  ],
+  "CREATININE":[
+    {k:"crt",lab:"Serum Creatinine",norm:"0.7 – 1.3 mg/dL"}
+  ],
+  "HBA1C":[
+    {k:"hba1c",lab:"HbA1c",norm:"4.0 – 5.6 %"}
+  ],
+  "LIPID PROFILE":[
+    {k:"chol",lab:"Total Cholesterol",norm:"< 200 mg/dL"},
+    {k:"hdl",lab:"HDL",norm:">= 40 mg/dL"},
+    {k:"ldl",lab:"LDL",norm:"< 100 mg/dL"},
+    {k:"tg",lab:"Triglycerides",norm:"< 150 mg/dL"}
+  ],
+  "SERUM ELECTROLYTES":[
+    {k:"na",lab:"Sodium (Na+)",norm:"135 – 145 mmol/L"},
+    {k:"k", lab:"Potassium (K+)",norm:"3.5 – 5.1 mmol/L"},
+    {k:"cl",lab:"Chloride (Cl-)",norm:"98 – 106 mmol/L"}
+  ],
+  "BLOOD GROUPING":[
+    {k:"bg",lab:"Blood Group",norm:"—"}
+  ]
+};
+
+/* ====== Populate tests ====== */
+const testSel = document.getElementById('testSel');
+Object.keys(TEST_PARAMS).forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; testSel.appendChild(o); });
+testSel.value = "CBP";
+
+/* ====== Render parameter rows ====== */
+const paramBox = document.getElementById('paramBox');
+function renderParams(){
+  paramBox.innerHTML='';
+  const list = TEST_PARAMS[testSel.value]||[];
+  list.forEach(p=>{
+    const wrap=document.createElement('div'); wrap.className='param';
+    wrap.innerHTML = `
+      <input type="checkbox" data-k="${p.k}" checked>
+      <div class="lab">${p.lab}</div>
+      <input class="input" type="text" placeholder="Result ${p.unit?('('+p.unit+')'):''}" data-inp="${p.k}">
+      <div class="small" data-norm="${p.k}">${p.norm||''}</div>
+    `;
+    paramBox.appendChild(wrap);
+  });
+  document.getElementById('pcount').textContent = list.length+' params';
+}
+renderParams();
+testSel.addEventListener('change', renderParams);
+
+/* ====== Preview buffer ====== */
+let PREVIEW=[];
+const prevTBody=document.querySelector('#prevTable tbody');
+function redrawPreview(){
+  prevTBody.innerHTML='';
+  PREVIEW.forEach(r=>{
+    prevTBody.insertAdjacentHTML('beforeend', `<tr><td>${r.test}</td><td>${r.lab}</td><td>${r.result}</td><td>${r.norm||''}</td></tr>`);
+  });
+}
+function addSelectedToPreview(){
+  const tn = testSel.value;
+  const list = TEST_PARAMS[tn]||[];
+  list.forEach(p=>{
+    const cb=paramBox.querySelector(`input[type=checkbox][data-k="${p.k}"]`);
+    const inp=paramBox.querySelector(`input[data-inp="${p.k}"]`);
+    if(cb && cb.checked){
+      PREVIEW.push({ test:tn, lab:p.lab, result:(inp?.value||'').trim(), norm:p.norm||'' });
+    }
+  });
+  redrawPreview();
+}
+
+/* Buttons */
+document.getElementById('btnAdd').onclick=()=>{ addSelectedToPreview(); alert('Added to report'); };
+document.getElementById('btnClear').onclick=()=>{ PREVIEW=[]; redrawPreview(); };
+
+/* ===== Helpers ===== */
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function val(id){ const el=document.getElementById(id); return el?el.value:''; }
+function buildPayload(){
+  const date = val('pdate') || todayISO();
+  return {
+    id: 'LAB'+Date.now(),
+    name: val('pname')||'',
+    pid: val('ppid')||'',
+    sex: val('psex')||'',
+    age: val('page')||'',
+    ref: val('pref')||'',
+    date,
+    items: PREVIEW.slice()
+  };
+}
+function ensurePreview(){
+  if(!PREVIEW.length){ addSelectedToPreview(); }
+  return PREVIEW.length>0;
+}
+
+/* ===== PRINT ===== */
+document.getElementById('btnPrint').onclick = async ()=>{
+  if(!ensurePreview()){ alert('No items to print'); return; }
+  const data = buildPayload();
+  try{ localStorage.setItem('last_lab_report', JSON.stringify(data)); }catch{}
+  const qs='?data='+encodeURIComponent(JSON.stringify(data))+'&print=1';
+  const target='./print/print-lab.html';
+  try{
+    const r=await fetch(target,{method:'HEAD',cache:'no-store'});
+    if(r.ok){ window.open(target+qs,'_blank'); return; }
+  }catch{}
+  window.print(); // fallback if print page not present
+};
+
+/* ===== SAVE ===== */
+document.getElementById('btnSave').onclick = ()=>{
+  if(!ensurePreview()){ alert('No items to save'); return; }
+  const data = buildPayload();
+  let arr=[]; try{ arr=JSON.parse(localStorage.getItem('lab_records_json')||'[]'); }catch{}
+  if(!Array.isArray(arr)) arr=[];
+  arr.push(data);
+  localStorage.setItem('lab_records_json', JSON.stringify(arr));
+  alert('✅ Saved to Lab Records');
+  window.location.href='./lab-records.html';
+};
+
+/* init date */
+document.getElementById('pdate').value = todayISO();
+</script>
+</body>
+</html>
