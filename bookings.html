@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="./config/config.js"></script>
+<script src="./scripts/db.js"></script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Bookings · Clinic PWA</title>
@@ -117,9 +119,11 @@ h3{margin:8px 0}
       </div>
 
       <div class="row">
-        <div style="flex:0 0 140px"><label>Height (cm)</label><input id="height" class="input" type="number"></div>
-        <div style="flex:0 0 140px"><label>Weight (kg)</label><input id="weight" class="input" type="number"></div>
-        <div style="flex:0 0 140px"><label>Temp (°C)</label><input id="temp" class="input" type="number"></div>
+        <!-- ▼ decimals enabled: step + inputmode only -->
+        <div style="flex:0 0 140px"><label>Height (cm)</label><input id="height" class="input" type="number" step="0.1" inputmode="decimal"></div>
+        <div style="flex:0 0 140px"><label>Weight (kg)</label><input id="weight" class="input" type="number" step="0.1" inputmode="decimal"></div>
+        <div style="flex:0 0 140px"><label>Temp (°C)</label><input id="temp" class="input" type="number" step="0.1" inputmode="decimal"></div>
+        <!-- ▲ no other changes -->
         <div style="flex:1 1 260px"><label>Guardian</label><input id="guardian" class="input"></div>
       </div>
 
@@ -218,7 +222,7 @@ function startBookingApp(){
 
   async function findExistingPIDByNamePhone(name, phone){
     if (DB.findPatientByNamePhone) return await DB.findPatientByNamePhone(name, phone);
-    try{ const db=new Dexie('clinicdb'); await db.open(); const p=await db.table('patients').where({patientName:name,contact:phone}).first(); db.close(); return p?.pid||null; }catch{ return null; }
+    try{ const db=new Dexie('clinicdb'); await db.open(); const p=await db.table('patients').where({patientName:name, contact:phone}).first(); db.close(); return p?.pid||null; }catch{ return null; }
   }
   async function nextTokenSafe(channel){
     if (DB.nextToken) return DB.nextToken(channel);
