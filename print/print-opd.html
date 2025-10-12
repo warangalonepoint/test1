@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="manifest" href="/manifest.webmanifest"/>
+
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>OPD Summary · Print</title>
@@ -25,7 +27,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 /* A4 sheet */
 .sheet{position:relative;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:18px;overflow:hidden}
 .a4{width:210mm;min-height:297mm;margin:auto}
-.sheet::before{ /* watermark */
+.sheet::before{
   content:""; position:absolute; inset:0; opacity:.06; pointer-events:none;
   background-repeat:no-repeat; background-position:center; background-size:60%;
   filter:grayscale(100%);
@@ -45,7 +47,8 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .kv{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px}
 .kv .k{font-weight:700}
 
-.vitals{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:6px}
+/* vitals: 8 columns (BP & Token removed) */
+.vitals{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-top:6px}
 .vitals .cell{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px}
 .vitals .k{font-weight:700}
 
@@ -57,14 +60,20 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 .table th,.table td{border:1px solid #3332;padding:6px;vertical-align:top}
 .table th{background:#f3f4f6}
 
+/* small chips for vax */
+.pill{display:inline-block;padding:4px 8px;border:1px solid #e2e8f0;border-radius:999px;background:#f8fafc;font-size:12px;margin:2px 6px 0 0}
+
+/* signature + note */
 .sig{display:flex;justify-content:flex-end;margin-top:14px}
 .sig .line{width:240px;border-top:1px solid #0008;text-align:center;font-size:12px;padding-top:4px}
+.note{margin-top:6px;text-align:center;font-size:12px;font-weight:700;color:#1f2937}
 
 .footer{margin-top:8px;text-align:center;font-size:12px;color:#222}
 .ribbon{margin-top:8px;background:#4b5563;color:#fff;padding:8px 12px;border-radius:8px;text-align:center;font-weight:800}
+
+/* emergency row (image removed, text kept) */
 .emg{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px}
 .emg .badge{font-weight:800;color:#0b4da2}
-.emg img{height:28px}
 
 /* print */
 @media print{
@@ -73,6 +82,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 }
 </style>
 <style id="wmStyle"></style>
+<script src="/config/config.js"></script>
+<script src="/scripts/app-wiring.js"></script>
+<script src="/scripts/db.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -132,6 +144,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <div class="kv"><div class="k">Next Visit</div><div id="v_next">—</div></div>
     </div>
 
+    <!-- Vitals (token & BP removed) -->
     <div class="vitals">
       <div class="cell"><span class="k">Ht</span>: <span id="v_ht">—</span></div>
       <div class="cell"><span class="k">Wt</span>: <span id="v_wt">—</span></div>
@@ -140,14 +153,21 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
       <div class="cell"><span class="k">Temp</span>: <span id="v_temp">—</span></div>
       <div class="cell"><span class="k">Pulse</span>: <span id="v_pulse">—</span></div>
       <div class="cell"><span class="k">SPO₂</span>: <span id="v_spo2">—</span></div>
-      <div class="cell"><span class="k">BP</span>: <span id="v_bp">—</span></div>
-      <div class="cell"><span class="k">Token</span>: <span id="v_token">—</span></div>
       <div class="cell"><span class="k">Phone</span>: <span id="v_phone">—</span></div>
     </div>
 
     <div class="sec"><h3>Chief Complaints</h3><div id="s_cc" class="box">—</div></div>
     <div class="sec"><h3>Examination</h3><div id="s_exam" class="box">—</div></div>
     <div class="sec"><h3>Diagnosis</h3><div id="s_dx" class="box">—</div></div>
+
+    <!-- NEW: Recommended Vaccination -->
+    <div class="sec" id="vax_block">
+      <h3>Recommended Vaccination</h3>
+      <div id="vax_text" class="box">
+        <div><b>Age:</b> <span id="ageMonths">—</span> months</div>
+        <div id="vaxDue" style="margin-top:6px"></div>
+      </div>
+    </div>
 
     <div class="sec">
       <h3>Medications</h3>
@@ -168,12 +188,18 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
     <div class="sec"><h3>Doctor Recommendations</h3><div id="s_plan" class="box">—</div></div>
 
-    <div class="sig"><div class="line">( <span id="sig_dname">Dr. Charan Theja Reddy Gurijala</span> )</div></div>
+    <div class="sig">
+      <div>
+        <div class="line">( <span id="sig_dname">Dr. Charan Theja Reddy Gurijala</span> )</div>
+        <div class="note" id="consult_valid_note"></div>
+      </div>
+    </div>
 
+    <!-- Emergency (text only) -->
     <div class="emg">
-      <img src="./assets/dolphin.png" alt="Dolphin">
       <div><span class="badge">For Emergencies:</span> Dolphin Children’s Hospital, Opp. Kasam Brothers Lane, Beside Police Station, Hanamkonda Chowrastha, Warangal — Ph: <b>6309172007 / 6309173007</b></div>
     </div>
+
     <div class="ribbon" id="cfg_appoint">For Appointment: +91 83408 40340</div>
     <div class="footer" id="cfg_footer">H.No. 2-1-45, Saraswathi Nagar, Gopalapuram, Hanamkonda, Telangana – 506 001.</div>
   </div>
@@ -181,21 +207,19 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:10px 0}
 
 <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
 <script>
-/* ---------- Config (hidden, still applied) ---------- */
+/* ---------- Config ---------- */
 const CFG_KEY='doctor_config_json';
 const defaults={
   clinic:"DR. CHARAN CHILD CLINIC",
   doctor_name:"Dr. Charan Theja Reddy Gurijala",
-  telugu_line:"డా|| చరణ్ థేజారెడ్డి గురిజాల",
+  telugu_line:"డా|| చరణ్ తేజ రెడ్డి గురిజాల",
   qualification:"MBBS, DNB (Paediatrics), MNAMS, PGPN (Boston)",
   specialization:"Consultant Paediatrician & Neonatologist",
   reg_no:"74740",
   timings:"TIMINGS: MON–SAT 9:00 AM – 12:00 PM | 6:00 PM – 9:00 PM | SUNDAY 10:00 AM – 2:00 PM",
   logo:"./assets/logo.png",
   address:"H.No. 2-1-45, Saraswathi Nagar, Gopalapuram, Hanamkonda, Telangana – 506 001.",
-  appointment:"+91 83408 40340",
-  emergency_hospital:"Dolphin Children’s Hospital",
-  emergency_phone:"6309172007 / 6309173007"
+  appointment:"+91 83408 40340"
 };
 const $=s=>document.querySelector(s);
 function toast(t){const m=$("#msg");m.textContent=t;m.style.display='block';setTimeout(()=>m.style.display='none',1500);}
@@ -216,11 +240,51 @@ function applyCfg(c){
   applyWatermark(c.logo||defaults.logo);
 }
 
-/* ---------- Data render ---------- */
+/* ---------- Helpers ---------- */
+function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d;}
+function formatDate(dt){ return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function parseAgeToMonths(ageStr){ if(!ageStr) return null; const y=(ageStr.match(/(\d+)\s*y/i)||[])[1]||0; const m=(ageStr.match(/(\d+)\s*m/i)||[])[1]||0; return (+y)*12+(+m); }
+function dueVaccines(ageM){
+  if(ageM==null) return [];
+  const plan=[
+    {at:0,items:["BCG","OPV-0","HepB-0"]},
+    {at:6,items:["DTaP-1","IPV-1","HepB-1","Hib-1","PCV-1","Rotavirus-1"]},
+    {at:10,items:["DTaP-2","IPV-2","Hib-2","PCV-2","Rotavirus-2"]},
+    {at:14,items:["DTaP-3","IPV-3","Hib-3","PCV-3"]},
+    {at:9,items:["MR/Measles-1"]},
+    {at:12,items:["HepA-1","Typhoid Conjugate"]},
+    {at:15,items:["MMR-2","Varicella-1","PCV Booster"]},
+    {at:18,items:["DTaP Booster-1","IPV Booster-1","Hib Booster"]},
+    {at:48,items:["DTaP Booster-2","MMR-3","Varicella-2"]},
+    {at:60,items:["Typhoid Booster","DT Booster"]}
+  ];
+  const i=plan.findIndex(p=>ageM<=p.at);
+  return (i<0? plan[plan.length-1].items : plan[i].items);
+}
+
+/* ---------- Data access (hardened) ---------- */
 async function dexieOpen(){
-  const db=new Dexie('clinicdb');
-  db.version(1).stores({opd:'++id,ts,pid,date'});
-  try{await db.open();}catch{}
+  const db = new Dexie('clinicdb');
+
+  // legacy stores
+  db.version(1).stores({
+    patients: 'pid,patientName,contact,dob',
+    bookings: '++id,date,ts,pid,token'
+  });
+
+  // ensure OPD exists (upgrade path)
+  db.version(2).stores({
+    opd: '++id,ts,pid,date'
+  });
+
+  // consolidated schema (future-proof)
+  db.version(3).stores({
+    patients: 'pid,patientName,contact,dob',
+    bookings: '++id,date,ts,pid,token',
+    opd: '++id,ts,pid,date'
+  });
+
+  try { await db.open(); } catch(e) { console.warn('Dexie open failed:', e); }
   return db;
 }
 
@@ -229,10 +293,16 @@ function renderOPD(rec){
   $('#v_uhid').textContent=rec.pid||'—';
   $('#v_visitno').textContent=rec.refToken||'—';
   $('#v_name').textContent=rec.name||'—';
-  $('#v_date').textContent=new Date(rec.ts||Date.now()).toLocaleString();
+
+  const visitDate = rec.ts ? new Date(rec.ts) : (rec.date ? new Date(rec.date) : new Date());
+  $('#v_date').textContent=visitDate.toLocaleString();
+
+  // validity note
+  const validTill = formatDate(addDays(visitDate,7));
+  $('#consult_valid_note').textContent = "CONSULTATION VALID UPTO " + validTill + " WITH ONE REVIEW";
+
   $('#v_age').textContent=`${rec.age||'-'} / ${rec.gender||'-'}`;
   $('#v_consult').textContent=rec.visitType||'First / Follow-up';
-  $('#v_token').textContent=rec.refToken||'—';
   $('#v_phone').textContent=rec.phone||'—';
   $('#v_next').textContent=rec.nextVisit||'—';
 
@@ -244,13 +314,19 @@ function renderOPD(rec){
   $('#v_temp').textContent=v.temp||'—';
   $('#v_pulse').textContent=v.pulse||'—';
   $('#v_spo2').textContent=v.spo2||'—';
-  $('#v_bp').textContent=v.bp||'—';
 
   $('#s_cc').textContent=(rec.notes?.cc||'').trim()||'—';
   $('#s_exam').textContent=(rec.notes?.exam||'').trim()||'—';
   $('#s_dx').textContent=(rec.notes?.dx||'').trim()||'—';
   $('#s_plan').textContent=(rec.notes?.plan||'').trim()||'—';
 
+  // Recommended Vaccination render
+  const ageM = parseAgeToMonths(rec.age||'');
+  $('#ageMonths').textContent = (ageM==null? '—' : ageM);
+  const due = dueVaccines(ageM);
+  $('#vaxDue').innerHTML = due.length ? due.map(v=>`<span class="pill">${v}</span>`).join(' ') : '<span class="muted">—</span>';
+
+  // Rx
   const rx=Array.isArray(rec.rx)?rec.rx:[];
   const rtbody=$("#tbl_rx tbody"); rtbody.innerHTML='';
   rx.forEach((r,i)=>{
@@ -259,6 +335,7 @@ function renderOPD(rec){
     rtbody.appendChild(tr);
   });
 
+  // Labs
   const labs=Array.isArray(rec.labs)?rec.labs:[];
   const ltbody=$("#tbl_lab tbody"); ltbody.innerHTML='';
   if(labs.length){
@@ -273,52 +350,76 @@ function renderOPD(rec){
   }
 }
 
-/* ---------- Loaders ---------- */
+/* ---------- Loaders (hardened with fallbacks) ---------- */
 async function loadAuto(){
+  // Staged payload (from OPD Live "Print")
   try{
     const staged=JSON.parse(localStorage.getItem('opd_print_payload')||'null');
     if(staged){ renderOPD(staged); return; }
   }catch{}
-  const db=await dexieOpen();
+
+  // IndexedDB (latest)
   try{
-    const all=await db.table('opd').toArray();
-    all.sort((a,b)=>(b.ts||0)-(a.ts||0));
-    if(all[0]) renderOPD(all[0]);
+    const db=await dexieOpen();
+    if (db.tables.find(t => t.name === 'opd')) {
+      const all=await db.table('opd').toArray();
+      all.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      if(all[0]) { renderOPD(all[0]); return; }
+    }
+  }catch(e){ console.warn('Dexie loadAuto failed:', e); }
+
+  // LocalStorage fallback
+  try{
+    const ls = JSON.parse(localStorage.getItem('opd_local_json') || '[]');
+    if (ls.length){ ls.sort((a,b)=>(b.ts||0)-(a.ts||0)); renderOPD(ls[0]); return; }
   }catch{}
+
+  console.info('No OPD data found for auto-load.');
 }
 
 async function loadByPID(){
-  const pid=$('#pid').value.trim();
+  const pid=($('#pid').value||'').trim().toUpperCase();
   if(!pid) return;
-  const db=await dexieOpen();
-  try{
-    const rows=await db.table('opd').where('pid').equals(pid).toArray();
-    rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
-    if(rows[0]) renderOPD(rows[0]);
-  }catch{}
-}
 
-function pasteJSON(){
+  // IndexedDB search
   try{
-    const obj=JSON.parse($('#paste').value||'');
-    renderOPD(obj);
-    toast('Loaded from pasted JSON');
-  }catch(e){
-    toast('Invalid JSON');
-  }
+    const db=await dexieOpen();
+    if (db.tables.find(t => t.name === 'opd')) {
+      const rows=await db.table('opd').where('pid').equals(pid).toArray();
+      rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      if(rows[0]) { renderOPD(rows[0]); return; }
+    }
+  }catch(e){ console.warn('Dexie loadByPID failed:', e); }
+
+  // LocalStorage fallback
+  try{
+    const ls = JSON.parse(localStorage.getItem('opd_local_json') || '[]');
+    const rows = ls.filter(r => (r.pid||'').toUpperCase() === pid);
+    rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(rows[0]) { renderOPD(rows[0]); return; }
+  }catch{}
+
+  // Staged payload (only works if it matches)
+  try{
+    const staged=JSON.parse(localStorage.getItem('opd_print_payload')||'null');
+    if(staged && (staged.pid||'').toUpperCase()===pid){ renderOPD(staged); return; }
+  }catch{}
+
+  alert('No OPD record found for '+pid);
 }
 
 /* ---------- Wire UI ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
   const cfg=loadCfg(); applyCfg(cfg);
 
-  // Query param ?pid=...
   const pidParam=new URL(location.href).searchParams.get('pid');
   if(pidParam){ $('#pid').value=pidParam; await loadByPID(); } else { await loadAuto(); }
 
   $('#btnLoadAuto').onclick=loadAuto;
   $('#btnLoadPID').onclick=loadByPID;
-  $('#paste').addEventListener('change',pasteJSON);
+  $('#paste').addEventListener('change', function(){
+    try{ const obj=JSON.parse($('#paste').value||''); renderOPD(obj); toast('Loaded from pasted JSON'); }catch{ toast('Invalid JSON'); }
+  });
   $('#btnPrint').onclick=()=>window.print();
 });
 </script>

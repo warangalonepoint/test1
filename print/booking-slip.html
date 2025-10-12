@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="manifest" href="/manifest.webmanifest"/>
+
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Booking Slip · A6 x 2 (Side by Side)</title>
@@ -39,7 +41,13 @@ body{margin:0;font:13px/1.4 system-ui;color:#111}
 
 /* Small tag for Original / Duplicate */
 .tag{font-size:11px;font-weight:700;color:#334155;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:1px 8px;float:right}
+
+/* Validity note */
+.note{margin-top:6px;text-align:center;font-weight:800;font-size:11px;color:#1f2937}
 </style>
+<script src="/config/config.js"></script>
+<script src="/scripts/app-wiring.js"></script>
+<script src="/scripts/db.js"></script>
 </head>
 <body>
 <div class="sheet">
@@ -60,9 +68,13 @@ body{margin:0;font:13px/1.4 system-ui;color:#111}
     <!-- Reason row removed -->
     <div class="row"><div><span class="lab">Contact:</span> <span id="phA">—</span></div><div><span class="lab">Payment:</span> <span id="pmA">—</span></div></div>
     <div class="row"><div><span class="lab">Ref:</span> <span id="prA">—</span></div></div>
-    <!-- NEW: Fees -->
+    <!-- Fees -->
     <div class="row"><div><span class="lab">Fees:</span> ₹300</div></div>
     <div class="row" style="align-items:center"><div class="lab">QR:</div><div id="qrA" class="qr"></div></div>
+
+    <!-- NEW: Validity note -->
+    <div class="note" id="noteA"></div>
+
     <div class="foot" id="addrA">Powered by Onestop AI Services</div>
   </div>
 
@@ -83,9 +95,13 @@ body{margin:0;font:13px/1.4 system-ui;color:#111}
     <!-- Reason row removed -->
     <div class="row"><div><span class="lab">Contact:</span> <span id="phB">—</span></div><div><span class="lab">Payment:</span> <span id="pmB">—</span></div></div>
     <div class="row"><div><span class="lab">Ref:</span> <span id="prB">—</span></div></div>
-    <!-- NEW: Fees -->
+    <!-- Fees -->
     <div class="row"><div><span class="lab">Fees:</span> ₹300</div></div>
     <div class="row" style="align-items:center"><div class="lab">QR:</div><div id="qrB" class="qr"></div></div>
+
+    <!-- NEW: Validity note -->
+    <div class="note" id="noteB"></div>
+
     <div class="foot" id="addrB">Powered by Onestop AI Services</div>
   </div>
 </div>
@@ -119,6 +135,17 @@ body{margin:0;font:13px/1.4 system-ui;color:#111}
   const d = getData() || {};
   const today = new Date().toISOString().slice(0,10);
 
+  // Helper: validity date (+7 days), format dd-MMM-YYYY
+  function addDays(date,days){ const dt=new Date(date); dt.setDate(dt.getDate()+days); return dt; }
+  function pickVisitDate(obj){
+    if (obj.ts) return new Date(obj.ts);
+    if (obj.date) return new Date(obj.date);
+    return new Date();
+  }
+  function fmt(d){
+    return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
   // 3) Fill both copies (no reason)
   function put(s){
     const get = k => (d[k]??'—');
@@ -131,6 +158,11 @@ body{margin:0;font:13px/1.4 system-ui;color:#111}
     document.getElementById('ph'+s).textContent   = get('contact')||'-';
     document.getElementById('pm'+s).textContent   = get('payMode')||'-';
     document.getElementById('pr'+s).textContent   = get('payRef')||'-';
+
+    // NEW: validity note
+    const visit = pickVisitDate(d);
+    const valid = fmt(addDays(visit,7));
+    document.getElementById('note'+s).textContent = 'CONSULTATION VALID UPTO ' + valid + ' WITH ONE REVIEW';
   }
   put('A'); put('B');
 

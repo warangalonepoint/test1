@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="manifest" href="/manifest.webmanifest"/>
+
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Print · Lab Report</title>
@@ -14,7 +16,7 @@ body{margin:0;font:13px/1.45 system-ui;color:#0f172a;background:#fff}
 .hdr .t{font-weight:900;font-size:20px}
 .hdr .sub{font-size:12px;color:#475569}
 
-/* Reduced banner (kept) */
+/* Banner */
 .banner{margin:6px 0 10px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;max-height:120px}
 .banner img{width:100%;height:auto;object-fit:contain;transform:scale(.55);
   transform-origin:center;opacity:.92;mix-blend-mode:multiply;display:block}
@@ -27,24 +29,28 @@ body{margin:0;font:13px/1.45 system-ui;color:#0f172a;background:#fff}
 .sign{margin-top:18px;display:flex;justify-content:space-between;align-items:flex-end}
 .small{font-size:12px;color:#64748b}
 .qr{width:90px;height:90px;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center}
-
+.total-line{margin-top:12px;text-align:right;font-weight:800;font-size:14px}
 .footerline{
   text-align:center;font-size:11px;color:#0f172a;margin-top:14px;
   border-top:2px solid #facc15;padding-top:4px;font-weight:500;
 }
 </style>
+<script src="/config/config.js"></script>
+<script src="/scripts/app-wiring.js"></script>
+<script src="/scripts/db.js"></script>
 </head>
 <body>
 <div class="wrap" id="root">
   <div class="hdr">
-    <img class="logo" src="./assets/logo.png" onerror="this.style.display='none'">
+    <img class="logo" src="../assets/logo.png" onerror="this.style.display='none'">
     <div>
       <div class="t" id="labTitle">Charan Clinical Laboratory</div>
       <div class="sub" id="labSub">Quality Diagnostics · Same-day Reports</div>
     </div>
   </div>
 
-  <div class="banner"><img src="./assets/banner.png" alt=""></div>
+  <!-- Banner (fixed relative path) -->
+  <div class="banner"><img src="../assets/banner/banner.png" alt="Clinic Banner"></div>
 
   <div class="row">
     <div class="box"><b>Pt Name:</b> <span id="pname">—</span></div>
@@ -56,14 +62,23 @@ body{margin:0;font:13px/1.45 system-ui;color:#0f172a;background:#fff}
     <div class="box" style="flex:0 0 220px"><b>Date:</b> <span id="pdate">—</span></div>
   </div>
 
+  <!-- Results (no price column) -->
   <table class="labtab">
-    <thead><tr><th style="width:45%">Parameters</th><th style="width:25%">Results</th><th>Normal Value</th></tr></thead>
+    <thead>
+      <tr>
+        <th style="width:45%">Parameters</th>
+        <th style="width:25%">Results</th>
+        <th>Normal Value</th>
+      </tr>
+    </thead>
     <tbody id="tbody"></tbody>
   </table>
 
+  <!-- Single overall price -->
+  <div id="totalLine" class="total-line"></div>
+
   <div class="sign">
     <div class="small">LAB TECHNICIAN</div>
-    <!-- ▶ QR code box (new) -->
     <div id="qrBox" class="qr"><div id="qr"></div></div>
   </div>
 
@@ -75,7 +90,6 @@ body{margin:0;font:13px/1.45 system-ui;color:#0f172a;background:#fff}
   </div>
 </div>
 
-<!-- QR engine -->
 <script src="/scripts/qrcode.min.js"></script>
 <script>
 const Q = s=>document.querySelector(s);
@@ -88,37 +102,37 @@ function getData(){
   try{ return JSON.parse(localStorage.getItem('last_lab_report')||'null') }catch{ return null; }
 }
 const d=getData()||{};
-Q('#pname').textContent = d.patient || '—';
+Q('#pname').textContent = d.name || d.patient || '—';
 Q('#psex').textContent  = d.sex || '—';
 Q('#page').textContent  = d.age ? (d.age+' Y') : '—';
 Q('#pref').textContent  = d.ref || '—';
 Q('#pdate').textContent = d.date || new Date().toISOString().slice(0,10);
 
-const ranges = {
-  hb:'(12 – 18 %)', rbc:'(4.2 – 5.2 %)', wbc:'(4,500 – 11,000/cu.mm)', pcv:'(37 – 47 %)',
-  platelet:'(1.5 – 4.5 Lakhs/cu.mm)', neutro:'(45 – 70 %)', lymph:'(20 – 40 %)',
-  eos:'(02 – 10 %)', mono:'(0 – 6 %)', baso:'(0 – 1 %)', esr:'(0 – 10 mm)'
-};
-const labels = {
-  hb:'Hemoglobin', rbc:'Erythrocytes', wbc:'WBC TC', pcv:'PCV', platelet:'Platelet Count',
-  neutro:'Neutrophils', lymph:'Lymphocytes', eos:'Eosinophil', mono:'Monocytes', baso:'Basophile', esr:'ESR'
-};
-const order = ['hb','rbc','wbc','pcv','platelet','neutro','lymph','eos','mono','baso','esr'];
-const res = d.results||{};
-const tb = document.getElementById('tbody');
-order.forEach(k=>{
-  const tr=document.createElement('tr');
-  tr.innerHTML = `<td>${labels[k]}</td><td>${res[k]??''}</td><td>${ranges[k]||''}</td>`;
-  tb.appendChild(tr);
-});
+/* Render parameters */
+const tb=document.getElementById('tbody');
+if(Array.isArray(d.items)){
+  d.items.forEach(x=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${x.lab||x.test||''}</td>
+                    <td>${x.result||''}</td>
+                    <td>${x.norm||''}</td>`;
+    tb.appendChild(tr);
+  });
+}
 
-/* ▶ Generate QR with key patient/report fields */
+/* Overall test price (sum of item prices if present, else d.total) */
+let total = 0;
+if (Array.isArray(d.items)) total = d.items.reduce((s,x)=>s + (+x.price||0), 0);
+if (!total && d.total) total = +d.total || 0;
+Q('#totalLine').textContent = total ? `Total: ₹ ${total.toFixed(0)}` : '';
+
+/* QR with summary */
 (function makeQR(){
   const payload = {
     pid: d.pid || '',
-    name: d.patient || '',
+    name: d.name || '',
     date: Q('#pdate').textContent,
-    ref: d.ref || '',
+    total,
     sig: 'LABREP'
   };
   try{
@@ -130,6 +144,7 @@ order.forEach(k=>{
   }catch(e){ document.getElementById('qrBox').style.display='none'; }
 })();
 
+/* auto-print mode */
 if (new URL(location.href).searchParams.get('print')==='1'){
   setTimeout(()=>window.print(), 200);
 }
