@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="manifest" href="/manifest.webmanifest"/>
+
+<script src="./config/config.js"></script>
+<script src="./scripts/db.js"></script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>TV Display · Clinic Queue</title>
@@ -92,7 +96,12 @@ body{
   .brand .title{font-size:18px}
   .token{font-size:44px}
 }
+
+/* Compact banner */
+.banner{position:relative;overflow:hidden;border-radius:16px;margin:8px 0 12px;background:#F1F5F9;border:1px solid #e5e7eb}
+.banner img{width:100%;max-height:140px;object-fit:contain;transform:scale(.72);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
 </style>
+<script src="/scripts/app-wiring.js"></script>
 </head>
 <body>
 <div class="screen">

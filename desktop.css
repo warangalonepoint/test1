@@ -1,0 +1,43 @@
+/* desktop.css — load this AFTER styles.css on every page */
+:root{
+  --desk-wrap: 1280px;          /* wider canvas on desktop */
+  --desk-font: 15px;
+}
+
+@media (min-width: 1024px){
+  .wrap{ max-width: var(--desk-wrap); }
+  body{ font-size: var(--desk-font); }
+  .table th, .table td{ padding: 8px 10px; }
+}
+
+/* sticky table headers + nice scrolling frame (JS will auto-wrap tables) */
+.table-wrap{
+  max-height: 66vh;            /* keep totals/actions visible on big screens */
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+/* make headers stick while scrolling rows */
+.table thead th{
+  position: sticky; top: 0; z-index: 5;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 #e5e7eb;
+}
+
+/* subtle hover for readability */
+.table tbody tr:hover{ background: #fafafa; }
+
+/* focus ring that doesn’t look awful */
+input:focus, select:focus, button:focus{
+  outline: 2px solid #93c5fd; outline-offset: 1px;
+}
+
+/* big action buttons look nicer on desktop */
+@media (min-width:1024px){
+  .btn{ padding: 8px 16px; }
+}
+
+/* keep footer at bottom when lots of rows */
+html, body{ height: 100%; }

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Clinic Health · Auto Setup</title>
+  <link rel="stylesheet" href="./styles.css"/>
+  <script src="./config/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
+  <style>
+    body{font:14px/1.45 system-ui;margin:0;background:#f7f8fb;color:#0f172a}
+    .wrap{max-width:900px;margin:0 auto;padding:16px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16px;margin-top:12px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{border:1px solid #cbd5e1;border-radius:12px;padding:8px 12px;background:#fff;font-weight:600;cursor:pointer}
+    .btn.primary{background:#17B26A;color:#fff;border-color:#17B26A}
+    pre{white-space:pre-wrap;background:#0f172a;color:#e5e7eb;padding:12px;border-radius:12px;max-height:360px;overflow:auto}
+    code{background:#f1f5f9;padding:2px 6px;border-radius:6px}
+    .ok{color:#065f46}.err{color:#b91c1c}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+    th,td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h2>Clinic Health / Auto Setup</h2>
+    <div class="row">
+      <button class="btn" id="btnPing">1) Ping CouchDB</button>
+      <button class="btn" id="btnCreate">2) Create All DBs</button>
+      <button class="btn" id="btnViews">3) Install Views</button>
+      <button class="btn" id="btnSmoke">4) Smoke Test (Pouch)</button>
+      <button class="btn primary" id="btnRunAll">Run All</button>
+    </div>
+    <div style="margin-top:8px" class="muted">
+      Couch URL: <code id="couchUrl"></code> · Prefix: <code id="dbPrefix"></code>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Modules</h3>
+    <table>
+      <thead><tr><th>#</th><th>Module</th><th>DB name</th><th>Status</th></tr></thead>
+      <tbody id="mods"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Logs</h3>
+    <pre id="logs"></pre>
+    <div id="tips" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const logs = document.getElementById('logs');
+  const modsTB = document.getElementById('mods');
+  const cfg = window.APP_CONFIG || {};
+  const base = (cfg.couchUrl || '').replace(/\/+$/,'') + (cfg.couchUrl ? '/' : '');
+  const pre = cfg.dbPrefix || 'clinic';
+  const modules = cfg.modules || ['patients','bookings','opd'];
+  document.getElementById('couchUrl').textContent = base || '(not set)';
+  document.getElementById('dbPrefix').textContent = pre;
+
+  function log(msg, cls){ const line = (cls?`<span class="${cls}">`:'')+msg+(cls?'</span>':''); logs.innerHTML += line + '\n'; logs.scrollTop = logs.scrollHeight; }
+  function row(id, name){ return `<tr id="r-${id}"><td></td><td>${name}</td><td>${pre}-${name}</td><td class="st">—</td></tr>`; }
+  function setStatus(name, txt, cls){ const td = document.querySelector(`#r-${name} .st`); if(td){ td.textContent = txt; td.className = 'st ' + (cls||''); } }
+
+  // render module table
+  modsTB.innerHTML = modules.map((m,i)=>row(m,m)).join('');
+  [...modsTB.querySelectorAll('tr')].forEach((tr,i)=> tr.children[0].textContent = i+1);
+
+  // Fetch helper (basic auth supported in couchUrl)
+  async function couch(path, opts={}){
+    const url = base + path.replace(/^\//,'');
+    const res = await fetch(url, { ...opts, headers: { 'Content-Type':'application/json', ...(opts.headers||{}) } });
+    return { ok: res.ok, status: res.status, json: (res.headers.get('content-type')||'').includes('application/json') ? await res.json() : await res.text() };
+  }
+
+  // 1) Ping
+  async function ping(){
+    log(`Ping → ${base || '(not set)'}`);
+    if(!base){ log('couchUrl is empty in config/config.js', 'err'); hintCORS(); return false; }
+    const r = await couch('');
+    if(r.ok){ log(`OK ${r.status} ${JSON.stringify(r.json)}`,'ok'); return true; }
+    log(`ERR ${r.status} ${JSON.stringify(r.json)}`,'err'); hintCORS(); return false;
+  }
+
+  // 2) Create DBs (idempotent)
+  async function createAll(){
+    for(const m of modules){
+      try{
+        const dbname = `${pre}-${m}`;
+        const chk = await couch(dbname);
+        if(chk.ok){ log(`DB exists: ${dbname}`,'ok'); setStatus(m,'exists','ok'); continue; }
+        const mk = await couch(dbname, { method:'PUT' });
+        if(mk.ok){ log(`DB created: ${dbname}`,'ok'); setStatus(m,'created','ok'); }
+        else { log(`Create failed ${dbname}: ${mk.status} ${JSON.stringify(mk.json)}`,'err'); setStatus(m,'create failed','err'); }
+      }catch(e){ log(`Create failed ${m}: ${e.message}`,'err'); setStatus(m,'create failed','err'); }
+    }
+  }
+
+  // 3) Views (only where needed; others get a simple _all view)
+  function ddoc(id, views){ return { _id: `_design/${id}`, views, language:'javascript' }; }
+  const VIEWS = {
+    patients: ddoc('by', {
+      by_name: { map: 'function(doc){ if(doc.patientName) emit(doc.patientName, doc); }' },
+      by_phone:{ map: 'function(doc){ if(doc.contact) emit(doc.contact, doc); }' }
+    }),
+    bookings: ddoc('by', {
+      by_date:  { map: 'function(doc){ if(doc.date && doc.ts) emit([doc.date, doc.ts], doc); }' },
+      by_pid:   { map: 'function(doc){ if(doc.pid && doc.ts) emit([doc.pid, doc.ts], doc); }' }
+    }),
+    opd: ddoc('by', {
+      by_date:  { map: 'function(doc){ if(doc.date && doc.ts) emit([doc.date, doc.ts], doc); }' },
+      by_pid:   { map: 'function(doc){ if(doc.pid && doc.ts) emit([doc.pid, doc.ts], doc); }' }
+    })
+  };
+  function genericAllDDoc(){ return ddoc('all', { all: { map:'function(doc){ emit(doc._id,1); }' } }); }
+
+  async function upsertDDoc(dbname, doc){
+    // get current
+    const got = await couch(`${dbname}/${encodeURIComponent(doc._id)}`);
+    if(got.ok && got.json && got.json._rev){ doc._rev = got.json._rev; }
+    const put = await couch(`${dbname}/${encodeURIComponent(doc._id)}`, { method:'PUT', body: JSON.stringify(doc) });
+    return put.ok;
+  }
+
+  async function installViews(){
+    for(const m of modules){
+      const dbname = `${pre}-${m}`;
+      const doc = VIEWS[m] || genericAllDDoc();
+      try{
+        const ok = await upsertDDoc(dbname, doc);
+        if(ok){ log(`Views installed: ${dbname}`,'ok'); setStatus(m,'views ok','ok'); }
+        else { log(`Views failed: ${dbname}`,'err'); setStatus(m,'views failed','err'); }
+      }catch(e){ log(`Views error ${dbname}: ${e.message}`,'err'); setStatus(m,'views failed','err'); }
+    }
+  }
+
+  // 4) Pouch smoke test (create 1 doc per DB and replicate, if remote)
+  async function smoke(){
+    if(!window.PouchDB){ log('PouchDB not loaded','err'); return; }
+    const baseClean = base; // already ends with /
+    for(const m of modules){
+      const name = `${pre}-${m}`;
+      const local = new PouchDB(name);
+      try{
+        const id = 'health-'+Date.now();
+        await local.put({_id:id, kind:'health', ts:Date.now(), module:m});
+        log(`Local put ✓ ${name}`,'ok'); setStatus(m,'local ok','ok');
+        if(baseClean){
+          const remote = new PouchDB(baseClean + name);
+          await local.sync(remote, { live:false, retry:false });
+          log(`Sync ✓ ${name}`,'ok'); setStatus(m,'synced','ok');
+        }
+      }catch(e){ log(`Smoke fail ${name}: ${e.message}`,'err'); setStatus(m,'smoke failed','err'); }
+    }
+  }
+
+  function hintCORS(){
+    const tips = document.getElementById('tips');
+    tips.innerHTML = `
+<div class="card" style="background:#fff8e1">
+  <b>If you see 401/403/CORS:</b>
+  <ol style="margin-top:6px">
+    <li>Open Fauxton → <code>Config</code> → set:
+      <ul>
+        <li><code>cors → origins</code> = <i>*</i> (or your domain)</li>
+        <li><code>cors → credentials</code> = <i>true</i></li>
+        <li><code>httpd → enable_cors</code> = <i>true</i></li>
+      </ul>
+    </li>
+    <li>Ensure admin party is disabled and your URL includes user:pass (e.g. <code>http://admin:pass@IP:5984/</code>).</li>
+  </ol>
+</div>`;
+  }
+
+  // wiring
+  document.getElementById('btnPing').onclick   = ping;
+  document.getElementById('btnCreate').onclick = createAll;
+  document.getElementById('btnViews').onclick  = installViews;
+  document.getElementById('btnSmoke').onclick  = smoke;
+  document.getElementById('btnRunAll').onclick = async ()=>{
+    logs.textContent=''; document.getElementById('tips').innerHTML='';
+    const a = await ping(); if(!a) return;
+    await createAll(); await installViews(); await smoke();
+    log('All done.','ok');
+  };
+})();
+</script>
+</body>
+</html>

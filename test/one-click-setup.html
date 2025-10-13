@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CouchDB · One-Click Minimal Setup (v2)</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--ok:#16a34a;--bad:#dc2626;--card:#fff}
+  body{margin:0;font:14px/1.5 system-ui;background:#f7f8fb;color:var(--ink)}
+  .wrap{max-width:860px;margin:24px auto;padding:0 12px}
+  .card{background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+  h1{margin:0 0 10px;font-size:20px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  label{font-weight:600}
+  input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+  .btn{padding:8px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#111827;color:#fff;font-weight:700;cursor:pointer}
+  .btn.secondary{background:#fff;color:#111;border-color:#cbd5e1}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;margin-left:6px}
+  .ok{background:#dcfce7;color:#166534}
+  .bad{background:#fee2e2;color:#991b1b}
+  pre{white-space:pre-wrap;background:#0b1220;color:#e5e7eb;padding:12px;border-radius:8px;overflow:auto;max-height:420px}
+  .hint{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>CouchDB · One-Click Test & Fix <span id="status" class="pill">idle</span></h1>
+
+    <div class="row">
+      <div style="flex:2 1 280px">
+        <label>Base URL (no creds, e.g. http://192.168.1.5:5984)</label>
+        <input id="base" placeholder="http://127.0.0.1:5984">
+      </div>
+      <div style="flex:1 1 140px">
+        <label>Username</label>
+        <input id="user" value="admin">
+      </div>
+      <div style="flex:1 1 160px">
+        <label>Password</label>
+        <input id="pass" type="password" placeholder="••••••••">
+      </div>
+      <div style="flex:1 1 160px">
+        <label>DB Prefix</label>
+        <input id="prefix" value="clinic">
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btnRun">Run Setup</button>
+      <button class="btn secondary" id="btnPing">Ping /_up</button>
+      <button class="btn secondary" id="btnList">List Databases</button>
+      <button class="btn secondary" id="btnWrite">Write + Read Test</button>
+    </div>
+
+    <div class="hint" style="margin-top:8px">
+      This page will enable CORS, create all required DBs, and verify read/write.  
+      Tip: after success, paste this in <code>config/config.js</code>:
+      <div id="cfgLine" class="hint" style="margin-top:6px;font-family:ui-monospace,monospace;"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 8px">Log</h3>
+    <pre id="log"></pre>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const logEl = $('#log'), statusEl = $('#status');
+  function log(...args){ logEl.textContent += args.join(' ') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+  function setStatus(text, good){ statusEl.textContent = text; statusEl.className='pill ' + (good===true?'ok': good===false?'bad':''); }
+
+  function val(id){ return document.getElementById(id).value.trim(); }
+  function encodeUserPass(u,p){
+    // build full couchUrl with URL-encoded password
+    const encUser = encodeURIComponent(u);
+    const encPass = encodeURIComponent(p);
+    const base = val('base').replace(/\/+$/,'');
+    const url = new URL(base);
+    url.username = encUser;
+    url.password = encPass;
+    return url.toString();
+  }
+  function authHeader(u,p){ return 'Basic ' + btoa(u + ':' + p); }
+
+  async function jfetch(base, u, p, path, opts={}){
+    const url = base.replace(/\/+$/,'') + path;
+    const hdr = opts.headers || {};
+    hdr['Authorization'] = authHeader(u,p);
+    hdr['Content-Type'] = hdr['Content-Type'] || 'application/json';
+    const res = await fetch(url, { method:'GET', ...opts, headers: hdr, credentials:'omit' });
+    const txt = await res.text();
+    let json=null; try{ json = txt? JSON.parse(txt):null; }catch{}
+    return { ok: res.ok, status:res.status, json, text:txt };
+  }
+
+  async function ping(){
+    const base=val('base'), u=val('user'), p=val('pass');
+    log('Pinging', base,'/_up …');
+    const r = await jfetch(base,u,p,'/_up');
+    log('/_up status:', r.status, r.json?JSON.stringify(r.json):r.text);
+    setStatus(r.ok?'/_up ok':'server unreachable', r.ok);
+    return r.ok;
+  }
+
+  async function enableCORS(){
+    const base=val('base'), u=val('user'), p=val('pass');
+    log('Enabling CORS on', base, '…');
+    const puts = [
+      ['/_node/_local/_config/httpd/enable_cors','"true"'],
+      ['/_node/_local/_config/cors/credentials','"true"'],
+      ['/_node/_local/_config/cors/origins','"*"'],
+      ['/_node/_local/_config/cors/methods','"GET, PUT, POST, HEAD, DELETE"'],
+      ['/_node/_local/_config/cors/headers','"accept, authorization, content-type, origin, referer"'],
+    ];
+    for(const [path, body] of puts){
+      const r = await jfetch(base,u,p,path,{method:'PUT',body});
+      log('PUT', path, '→', r.status);
+    }
+    log('CORS enable attempted.');
+  }
+
+  async function ensureDBs(){
+    const base=val('base'), u=val('user'), p=val('pass'), pre=val('prefix');
+    const DBS = [
+      `${pre}-patients`, `${pre}-bookings`, `${pre}-opd`,
+      `${pre}-inventory`, `${pre}-purchases`, `${pre}-returns`, `${pre}-sales`, `${pre}-gst`, `${pre}-pharmacy`,
+      `${pre}-lab-tests`, `${pre}-lab-orders`, `${pre}-lab-reports`, `${pre}-lab-records`
+    ];
+    log('Ensuring DBs:', DBS.join(', '));
+    for(const d of DBS){
+      const r = await jfetch(base,u,p,'/'+encodeURIComponent(d), {method:'PUT'});
+      if(r.status===201){ log(' created:', d); }
+      else if(r.status===412){ log(' exists :', d); }
+      else { log('  ERROR :', d, '→', r.status, r.text || JSON.stringify(r.json||{})); }
+    }
+  }
+
+  async function writeReadTest(){
+    const base=val('base'), u=val('user'), p=val('pass'), pre=val('prefix');
+    const db = `${pre}-patients`;
+    const docId = 'selftest-' + Date.now();
+    log('Writing test doc to', db,'…');
+    const put = await jfetch(base,u,p,`/${db}/${docId}`, {method:'PUT', body: JSON.stringify({ok:true, ts:Date.now()})});
+    log(' PUT →', put.status, put.text || JSON.stringify(put.json||{}));
+    log('Reading back …');
+    const get = await jfetch(base,u,p,`/${db}/${docId}`);
+    log(' GET →', get.status, get.text || JSON.stringify(get.json||{}));
+    const ok = put.status===201 && get.status===200;
+    setStatus(ok?'sync ready':'write/read failed', ok);
+    return ok;
+  }
+
+  async function runAll(){
+    logEl.textContent=''; setStatus('running…');
+    const baseOk = await ping();
+    if(!baseOk){ setStatus('server unreachable', false); return; }
+    await enableCORS();
+    await ensureDBs();
+    await writeReadTest();
+
+    const line = `APP_CONFIG.couchUrl = "${encodeUserPass(val('user'), val('pass'))}";`;
+    document.getElementById('cfgLine').textContent = line;
+    log('\nPaste into config/config.js:\n' + line);
+  }
+
+  // Buttons
+  document.getElementById('btnRun').onclick = runAll;
+  document.getElementById('btnPing').onclick = ping;
+  document.getElementById('btnList').onclick = async ()=>{
+    const base=val('base'), u=val('user'), p=val('pass');
+    const r = await jfetch(base,u,p,'/_all_dbs');
+    log('Databases:', r.status, r.text || JSON.stringify(r.json||{}));
+  };
+  document.getElementById('btnWrite').onclick = writeReadTest;
+})();
+</script>
+</body>
+</html>

@@ -1,43 +1,60 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Sales · Pharmacy · Clinic PWA</title>
-<link rel="manifest" href="./manifest.json"/>
-<link rel="stylesheet" href="./styles.css"/>
-<style>
-:root{--bg:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);--card:#fff;--ink:#0f172a;--muted:#475569;--primary:#139a5b;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.08);--banner-bg:#f5f3ff;--banner-line:#e5e7eb}
-*{box-sizing:border-box} body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);} a{color:inherit;text-decoration:none}
-.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
-.topbar{margin-top:10px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);background:var(--banner-bg);border:1px solid var(--banner-line)}
-.topbar .row{display:flex;align-items:center;gap:12px;padding:10px 12px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand img{height:40px}
-.brand .title{font-weight:800;font-size:18px}
-.brand .sub{font-size:12px;color:var(--muted)}
-.links{margin-left:auto;display:flex;gap:8px}
-.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
-.btn.primary{background:var(--primary);color:#fff;border:none}
-.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
-.row{display:flex;flex-wrap:wrap;gap:10px}
-.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
-.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
-.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
-.table th{background:#f1f5f9}
-.total{font-weight:700;font-size:15px;text-align:right;padding:4px 0}
-.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0 14px}
-.hidden{display:none!important}
-@media print{
-  body{background:#fff;color:#000;margin:0}
-  .wrap{display:none}
-  #printArea{display:block;padding:6mm}
-}
-#printArea{display:none}
-</style>
+  <script src="./config/config.js"></script>
+  <script src="./scripts/db.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Sales · Pharmacy · Clinic PWA</title>
+  <link rel="manifest" href="./manifest.json"/>
+  <link rel="stylesheet" href="./styles.css"/>
+<link rel="stylesheet" href="./desktop.css?v=1.0"/>
+  <style>
+    :root{--bg:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);--card:#fff;--ink:#0f172a;--muted:#475569;--primary:#139a5b;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.08)}
+    *{box-sizing:border-box} body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);} a{color:inherit;text-decoration:none}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+    .topbar{margin-top:12px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);background:#EEF2FF;border:1px solid #e5e7eb}
+    .topbar .row{display:flex;align-items:center;gap:12px;padding:10px 12px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{height:40px}
+    .brand .title{font-weight:800;font-size:18px}
+    .brand .sub{font-size:12px;color:var(--muted)}
+    .links{margin-left:auto;display:flex;gap:8px}
+    .btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+    .btn.primary{background:var(--primary);color:#fff;border:none}
+    .card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+    .row{display:flex;flex-wrap:wrap;gap:10px}
+    .input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+    .table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+    .table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+    .table th{background:#f1f5f9}
+    .total{font-weight:700;font-size:15px;text-align:right;padding:4px 0}
+    .footer{text-align:center;padding:18px 4px 22px;font-size:13px;color:var(--muted);margin:16px 0}
+    .hidden{display:none!important}
+    @media (max-width:720px){ .table{font-size:12px} }
+    @media print{ body{background:#fff;color:#000;margin:0} .wrap{display:block} #printArea{display:none} }
+    #printArea{display:none}
+
+    /* 10-col autosuggest grid */
+    .suggest-wrap{position:relative}
+    .suggest-box{
+      position:absolute; top:100%; left:0; right:0;
+      background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+      box-shadow:0 12px 28px rgba(0,0,0,.12);
+      margin-top:6px; max-height:260px; overflow:auto; z-index:1000; padding:8px;
+    }
+    .suggest-grid{display:grid; grid-template-columns:repeat(10, minmax(90px, 1fr)); gap:6px; min-width:100%;}
+    .sug-item{border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font:12px system-ui; background:#F8FAFC; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .sug-item:hover{background:#EEF2FF;border-color:#c7d2fe}
+
+    /* Blank rows for neat print */
+    .blank-row td{height:24px}
+  </style>
+  <script src="/scripts/app-wiring.js"></script>
 </head>
 <body>
 <div class="wrap">
+
   <div class="topbar">
     <div class="row">
       <div class="brand">
@@ -54,23 +71,31 @@
     </div>
   </div>
 
+  <!-- No banner -->
+
   <div class="card" style="background:#D6E5DD">
-    <h3>New Sale</h3>
+    <h3 style="margin:0 0 6px">New Sale</h3>
     <div class="row">
       <div style="flex:1">
         <label>Patient / Buyer Name</label>
         <input id="buyer" class="input" placeholder="Walk-in / PID">
       </div>
-      <div style="flex:1">
+
+      <div style="flex:1" class="suggest-wrap">
         <label>Search Product (name or barcode)</label>
         <input id="pname" class="input" oninput="suggest()" list="plist" placeholder="Start typing or scan…">
+        <div id="pgrid" class="suggest-box hidden">
+          <div class="suggest-grid" id="pgridBody"></div>
+        </div>
       </div>
+
       <datalist id="plist"></datalist>
+
       <div style="flex:0 0 110px">
         <label>Qty</label>
         <input id="pqty" class="input" type="number" min="1" value="1">
       </div>
-      <div style="flex:1 1 200px">
+      <div style="flex:1 1 260px">
         <label>Payment</label>
         <div class="row">
           <select id="payMode" class="input" style="flex:1">
@@ -79,7 +104,7 @@
           <input id="payRef" class="input" style="flex:1" placeholder="Ref / Txn (optional)">
         </div>
       </div>
-      <div style="flex:0 0 220px;align-self:end" class="row">
+      <div style="flex:0 0 260px;align-self:end" class="row">
         <button class="btn primary" onclick="addItem()">Add Item</button>
         <button class="btn" data-scan data-scan-target="#pname" id="scanSales">Scan</button>
       </div>
@@ -89,19 +114,46 @@
   <div class="card" style="background:#FFF9F3">
     <table class="table" id="saleTable">
       <thead>
-        <tr><th>#</th><th>Product</th><th>Batch</th><th>EXP</th><th>Qty</th><th>MRP</th><th>GST %</th><th>Amount</th></tr>
+        <tr>
+          <th>#</th>
+          <th>Product</th>
+          <th>HSN</th>
+          <th>Pack</th>
+          <th>Batch</th>
+          <th>EXP</th>
+          <th>Qty</th>
+          <th>MRP/Each</th>
+          <th>Amount</th>
+        </tr>
       </thead>
       <tbody></tbody>
       <tfoot>
-        <tr><td colspan="7" class="total">Subtotal</td><td id="subTotal">0.00</td></tr>
-        <tr><td colspan="7" class="total">Discount (%)</td><td><input id="disc" type="number" style="width:70px;text-align:right" value="0" oninput="recalc()"></td></tr>
-        <tr><td colspan="7" class="total">Net Total</td><td id="netTotal">0.00</td></tr>
+        <tr><td colspan="8" class="total">Subtotal</td><td id="subTotal">0.00</td></tr>
+        <tr><td colspan="8" class="total">Discount (%)</td><td><input id="disc" type="number" style="width:70px;text-align:right" value="0" oninput="recalc()"></td></tr>
+
+        <!-- GST summary -->
+        <tr>
+          <td colspan="8" class="total">GST % (inclusive)</td>
+          <td>
+            <select id="gstRate" class="input" style="width:90px" onchange="recalc()">
+              <option value="0">0</option>
+              <option value="5">5</option>
+              <option value="12" selected>12</option>
+              <option value="18">18</option>
+              <option value="28">28</option>
+            </select>
+          </td>
+        </tr>
+        <tr><td colspan="8" class="total">Taxable Value</td><td id="taxableVal">0.00</td></tr>
+        <tr><td colspan="8" class="total">CGST</td><td id="cgstVal">0.00</td></tr>
+        <tr><td colspan="8" class="total">SGST</td><td id="sgstVal">0.00</td></tr>
+        <tr><td colspan="8" class="total">Net Total</td><td id="netTotal">0.00</td></tr>
       </tfoot>
     </table>
-    <div class="row" style="justify-content:flex-end;margin-top:8px;gap:8px">
+    <div class="row" style="justify-content:flex-end;margin-top:10px;gap:8px">
       <button class="btn" onclick="clearAll()">Clear</button>
+      <button class="btn" id="btnPrint" onclick="printBill()">🖨️ Print A5 Bill</button>
       <button class="btn primary" id="btnSave" onclick="saveInvoice()">💾 Save Invoice</button>
-      <button class="btn hidden" id="btnPrint" onclick="printBill()">🖨️ Print A5 Bill</button>
     </div>
   </div>
 
@@ -115,73 +167,177 @@ let STOCK=[], SALE=[];
 function loadStock(){ try{STOCK=JSON.parse(localStorage.getItem('pharma_stock_json')||'[]')||[]}catch{STOCK=[]} }
 loadStock();
 
+function uniqNames(list){
+  const seen=new Set(); const out=[];
+  for(const s of list){ const n=(s.name||'').trim(); if(!n) continue;
+    const key=n.toLowerCase(); if(seen.has(key)) continue; seen.add(key); out.push(n);
+  }
+  return out;
+}
+
 function suggest(){
   const val=document.getElementById('pname').value.toLowerCase();
   const d=document.getElementById('plist'); d.innerHTML='';
-  STOCK.filter(s=> (s.name||'').toLowerCase().includes(val)).slice(0,10).forEach(s=>{
-    const o=document.createElement('option'); o.value=s.name; d.appendChild(o);
+  const grid=document.getElementById('pgrid');
+  const gridBody=document.getElementById('pgridBody');
+  gridBody.innerHTML='';
+
+  if(!val){ grid.classList.add('hidden'); return; }
+
+  const matches = STOCK.filter(s=> (s.name||'').toLowerCase().includes(val));
+  const names = uniqNames(matches).sort();
+
+  names.slice(0,10).forEach(n=>{
+    const o=document.createElement('option'); o.value=n; d.appendChild(o);
   });
+
+  names.slice(0,200).forEach(n=>{
+    const b=document.createElement('div');
+    b.className='sug-item';
+    b.textContent=n; b.title=n;
+    b.onclick=()=>{
+      document.getElementById('pname').value=n;
+      grid.classList.add('hidden');
+      document.getElementById('pname').focus();
+    };
+    gridBody.appendChild(b);
+  });
+
+  grid.classList.toggle('hidden', gridBody.children.length===0);
 }
+
 function toExp(mmYY){ const [m,y]=String(mmYY||'').split('/').map(n=>parseInt(n,10)); return new Date(2000+(y||0),((m||1)-1),1); }
 function eqi(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase();}
-function guessGST(mrp){ if(mrp<50)return 5; if(mrp<200)return 12; if(mrp<500)return 18; return 28; }
 function persistStock(){ localStorage.setItem('pharma_stock_json',JSON.stringify(STOCK)); }
 function q(sel){return document.querySelector(sel)} function g(id){return document.getElementById(id).value} function s(id,v){document.getElementById(id).value=v}
+function money(n){ n=+n||0; return n.toFixed(2); }
 
 function addFromPool(pool, qty){
   let need=qty; const picks=[];
   for(const st of pool.sort((a,b)=>toExp(a.exp)-toExp(b.exp))){
     if(need<=0) break; if((st.qty||0)<=0) continue;
     const take=Math.min(st.qty,need); st.qty-=take; need-=take;
-    picks.push({name:st.name,batch:st.batch,exp:st.exp,qty:take,mrp:+st.mrp,gst:guessGST(+st.mrp)});
+    picks.push({
+      name:st.name,
+      hsn:st.hsn || '',          // <-- HSN carried from stock
+      pack:st.pack || st.unit || '',
+      batch:st.batch,
+      exp:st.exp,
+      qty:take,
+      mrp:+st.mrp
+    });
   }
   if(need>0){ alert('Insufficient stock'); return; }
   SALE.push(...picks); persistStock(); render();
 }
+
 function addItem(){
   const name=g('pname').trim(); const qty=+g('pqty')||0; if(!name||!qty)return;
   const pool = STOCK.filter(s=>eqi(s.name,name));
   if(!pool.length){ alert('Not found'); return; }
   addFromPool(pool, qty);
   s('pname',''); s('pqty','1');
+  document.getElementById('pgrid').classList.add('hidden');
 }
+
 function render(){
   const tb=q('#saleTable tbody'); tb.innerHTML=''; let sub=0;
   SALE.forEach((r,i)=>{ const amt=r.qty*r.mrp; sub+=amt;
-    tb.innerHTML+=`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.batch}</td><td>${r.exp}</td><td>${r.qty}</td><td>${r.mrp.toFixed(2)}</td><td>${r.gst}%</td><td>${amt.toFixed(2)}</td></tr>`;
+    tb.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${i+1}</td>
+        <td>${r.name||''}</td>
+        <td>${r.hsn||''}</td>
+        <td>${r.pack||''}</td>
+        <td>${r.batch||''}</td>
+        <td>${r.exp||''}</td>
+        <td>${r.qty}</td>
+        <td>${money(r.mrp)}</td>
+        <td>${money(amt)}</td>
+      </tr>`);
   });
-  q('#subTotal').textContent=sub.toFixed(2); recalc();
+
+  // Ensure 10 blank rows before totals
+  const blanks = Math.max(0, 10 - SALE.length);
+  for(let i=0;i<blanks;i++){
+    tb.insertAdjacentHTML('beforeend', `
+      <tr class="blank-row">
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>`);
+  }
+
+  q('#subTotal').textContent=sub.toFixed(2);
+  recalc();
 }
-function recalc(){ const sub=+q('#subTotal').textContent||0; const d=+g('disc')||0; q('#netTotal').textContent=(sub*(1-d/100)).toFixed(2); }
+
+function recalc(){
+  const sub=+q('#subTotal').textContent||0;
+  const d=+g('disc')||0;
+  const afterDisc = sub*(1-d/100);
+  q('#netTotal').textContent=afterDisc.toFixed(2);
+
+  // GST breakdown (assumes MRP is GST-inclusive)
+  const rate = +(document.getElementById('gstRate')?.value || 0);
+  if(rate>0){
+    const taxable = afterDisc * (100/(100+rate));
+    const gstAmt  = afterDisc - taxable;
+    const half = gstAmt/2;
+    q('#taxableVal').textContent = taxable.toFixed(2);
+    q('#cgstVal').textContent = half.toFixed(2);
+    q('#sgstVal').textContent = half.toFixed(2);
+  }else{
+    q('#taxableVal').textContent = afterDisc.toFixed(2);
+    q('#cgstVal').textContent = '0.00';
+    q('#sgstVal').textContent = '0.00';
+  }
+}
 
 function saveInvoice(){
   if(!SALE.length)return alert("No items added!");
   const buyer=g('buyer')||'Walk-in';
   const now=new Date();
   const id='DM'+now.getTime().toString().slice(-6);
-  const subtotal=+q('#subTotal').textContent||0;
-  const discount=+g('disc')||0;
   const total=+q('#netTotal').textContent||0;
-  const gstSplit={5:0,12:0,18:0,28:0};
-  SALE.forEach(r=>gstSplit[r.gst]=(gstSplit[r.gst]||0)+(r.qty*r.mrp));
 
-  const bill={id,buyer,total,items:SALE,date:now.toISOString(),payMode:g('payMode'),payRef:g('payRef')};
+  // items already include HSN
+  const bill={ id,buyer,total, items:SALE, date:now.toISOString(), payMode:g('payMode'), payRef:g('payRef') };
   let arr=[]; try{arr=JSON.parse(localStorage.getItem('pharma_sales_json')||'[]')}catch{}
   arr.push(bill); localStorage.setItem('pharma_sales_json',JSON.stringify(arr));
-  localStorage.setItem('sales_print_payload', JSON.stringify(bill));
+  localStorage.setItem('last_sale_bill', JSON.stringify(bill));
   alert("✅ Invoice saved successfully!");
-  q('#btnSave').classList.add('hidden');
-  q('#btnPrint').classList.remove('hidden');
-  clearAll();
 }
 
 function printBill(){
-  window.open('./print/print-sales.html','_blank');
+  try{
+    const latest = JSON.parse(localStorage.getItem('last_sale_bill')||'null');
+    if(!latest && !SALE.length){ alert('Nothing to print'); return; }
+    const data = latest || {
+      id:'TMP'+Date.now().toString().slice(-6),
+      buyer:g('buyer')||'Walk-in',
+      items: SALE.slice(), // contains HSN per line
+      date:new Date().toISOString(),
+      payMode:g('payMode'), payRef:g('payRef'),
+      total:+q('#netTotal').textContent||0
+    };
+    localStorage.setItem('last_sale_bill', JSON.stringify(data));
+    window.open('./print/print-sales.html?print=1','_blank');
+  }catch{ window.open('./print/print-sales.html','_blank'); }
 }
 
 function clearAll(){ SALE=[]; render(); }
 
-/* ---- Rx Receiver Dock (unchanged) ---- */
+/* Close grid on outside click / ESC */
+document.addEventListener('click', (e)=>{
+  const box=document.getElementById('pgrid');
+  if(!box) return;
+  const wrap = box.closest('.suggest-wrap');
+  if(!wrap.contains(e.target)) box.classList.add('hidden');
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape'){ const box=document.getElementById('pgrid'); if(box) box.classList.add('hidden'); }
+});
+
+/* Rx Receiver Dock (unchanged) */
 (function(){
   const QKEY='pharma_rx_queue';
   const dock=document.createElement('div');
@@ -222,5 +378,8 @@ function clearAll(){ SALE=[]; render(); }
   });
 })();
 </script>
+
+<script src="/scripts/scanner.js?v=1.0"></script>
+<script src="/scripts/shortcuts.js?v=1.0"></script>
 </body>
 </html>

@@ -1,56 +1,63 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Inventory · Pharmacy · Clinic PWA</title>
-<link rel="manifest" href="./manifest.json"/>
-<link rel="stylesheet" href="./styles.css"/>
-<script src="./config.js"></script>
-<style>
-:root{
-  --bg-gradient: linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);
-  --mint:#D6E5DD; --lav:#DED8F2; --peach:#FFE8D9; --pink:#FBD6E3; --teal:#C8F5E4; --amber:#FFE9B3;
-  --card:#ffffff; --ink:#0f172a; --muted:#475569; --primary:#139a5b;
-  --r:16px; --shadow:0 6px 18px rgba(0,0,0,0.08);
-}
-:root{ --header-tint:#D6E5DD; --header-tint-rgba:214,229,221; --banner-tint:#DED8F2; --banner-tint-rgba:222,216,242; }
-
-*{box-sizing:border-box}
-body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);}
-a{color:inherit;text-decoration:none}
-.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
-.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(var(--header-tint-rgba),0.7);border:1px solid #0001;border-radius:12px;margin-top:10px;box-shadow:var(--shadow);}
-.header .logo{height:40px}
-.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
-.btn:hover{background:#f1f5f9}
-.btn.primary{background:var(--primary);color:#fff;border:none}
-.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:var(--banner-tint)}
-.banner img{width:100%;transform:scale(.65);display:block;border-radius:var(--r);mix-blend-mode:multiply;opacity:.95}
-.banner::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(var(--banner-tint-rgba),.3),rgba(var(--banner-tint-rgba),.3))}
-.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
-.row{display:flex;flex-wrap:wrap;gap:10px}
-.input,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
-.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
-.table th,.table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left}
-.table th{background:#f1f5f9}
-.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #e2e8f0;background:#fff}
-.low{background:#FFF7D6;border-color:#FCD34D}
-.near{background:#FFE8D9;border-color:#FEBB99}
-.exp{background:#FBD6E3;border-color:#F59AB5}
-.footer{text-align:center;padding:16px 4px;font-size:13px;color:var(--muted);margin:22px 0 14px}
-.badge{display:inline-block;background:#fff;border:1px solid #e2e8f0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
-.hide{display:none}
-</style>
+  <script src="./config/config.js"></script>
+  <script src="./scripts/db.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Inventory · Pharmacy · Clinic PWA</title>
+  <link rel="manifest" href="./manifest.json"/>
+  <link rel="stylesheet" href="./styles.css"/>
+<link rel="stylesheet" href="./desktop.css?v=1.0"/>
+  <style>
+    :root{
+      --bg:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);
+      --card:#fff; --ink:#0f172a; --muted:#475569; --primary:#139a5b;
+      --r:16px; --shadow:0 6px 18px rgba(0,0,0,.08);
+      --mint:#D6E5DD; --lav:#DED8F2; --peach:#FFE8D9;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+    .header{display:flex;align-items:center;justify-content:space-between;
+      padding:10px 12px;background:#EEF2FF;border:1px solid #0001;border-radius:12px;margin:12px 0 10px;box-shadow:var(--shadow)}
+    .header .logo{height:40px}
+    .btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+    .btn:hover{background:#f1f5f9}
+    .btn.primary{background:var(--primary);color:#fff;border:none}
+    .banner{position:relative;overflow:hidden;border-radius:16px;margin:8px 0 12px;background:#F1F5F9;border:1px solid #e5e7eb}
+    .banner img{width:100%;max-height:140px;object-fit:contain;transform:scale(.72);transform-origin:center;opacity:.95;mix-blend-mode:multiply;display:block}
+    .card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+    .row{display:flex;flex-wrap:wrap;gap:10px}
+    .input,select{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+    .table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+    .table th,.table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;vertical-align:top}
+    .table th{background:#f1f5f9}
+    .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #e2e8f0;background:#fff}
+    .low{background:#FFF7D6;border-color:#FCD34D}
+    .near{background:#FFE8D9;border-color:#FEBB99}
+    .exp{background:#FBD6E3;border-color:#F59AB5}
+    .footer{text-align:center;padding:18px 4px 22px;font-size:13px;color:var(--muted);margin:16px 0}
+    .badge{display:inline-block;background:#fff;border:1px solid #e2e8f0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+    .hide{display:none}
+    @media (max-width:720px){
+      .header{gap:8px}
+      .banner img{transform:scale(.84)}
+      .table{font-size:12px}
+    }
+  </style>
 </head>
 <body>
 <div class="wrap">
 
   <div class="header">
-    <img class="logo" src="./assets/logo.png" alt="logo">
-    <div>
-      <div style="font-weight:700;font-size:18px">Inventory</div>
-      <div style="font-size:13px;color:var(--muted)">FEFO batches · expiry & low-stock · <b>barcode-ready</b></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <img class="logo" src="./assets/logo.png" alt="logo">
+      <div>
+        <div style="font-weight:700;font-size:18px">Inventory</div>
+        <div style="font-size:13px;color:var(--muted)">FEFO batches · expiry & low-stock · <b>barcode-ready</b></div>
+      </div>
     </div>
     <div class="row" style="gap:6px">
       <a class="btn" href="./pharmacy.html">DRUVHI MEDICALS</a>
@@ -58,39 +65,45 @@ a{color:inherit;text-decoration:none}
     </div>
   </div>
 
+  <!-- Compact banner -->
   <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
 
   <!-- Add / Edit Batch -->
   <div class="card" style="background:var(--mint)">
-    <h3>Add / Update Batch</h3>
+    <h3 style="margin:0 0 8px">Add / Update Batch</h3>
     <div class="row">
-      <div style="flex:2 1 280px"><label>Product</label><input id="name" class="input" placeholder="ACCUMONT-LC SYP"></div>
+      <div style="flex:2 1 240px"><label>Product</label><input id="name" class="input" placeholder="ACCUMONT-LC SYP"></div>
+      <div style="flex:1 1 140px"><label>MFR / Company</label><input id="company" class="input" placeholder="Manufacturer"></div>
       <div style="flex:1 1 120px"><label>Pack</label><input id="pack" class="input" placeholder="60ML"></div>
       <div style="flex:1 1 140px"><label>Batch</label><input id="batch" class="input" placeholder="LD-9076B"></div>
       <div style="flex:1 1 140px"><label>EXP (MM/YY)</label><input id="exp" class="input" placeholder="12/26"></div>
-      <div style="flex:1 1 100px"><label>Qty</label><input id="qty" class="input" type="number" min="0" step="1"></div>
+      <div style="flex:1 1 120px"><label>Qty</label><input id="qty" class="input" type="number" min="0" step="1"></div>
       <div style="flex:1 1 120px"><label>MRP</label><input id="mrp" class="input" type="number" step="0.01"></div>
       <div style="flex:1 1 120px"><label>Rate</label><input id="rate" class="input" type="number" step="0.01"></div>
+      <div style="flex:1 1 140px"><label>HSN</label><input id="hsn" class="input" placeholder="30049099"></div>
+      <div style="flex:1 1 120px"><label>GST %</label><input id="gst" class="input" type="number" step="0.01" placeholder="12"></div>
+      <div style="flex:1 1 180px"><label>Supplier</label><input id="supplier" class="input" placeholder="Distributor"></div>
       <div style="flex:2 1 260px">
         <label>Barcode (optional)</label>
         <div class="row" style="gap:6px">
           <input id="barcode" class="input" placeholder="AUTO: NAME|BATCH">
-          <!-- scanner button uses data-scan to open camera and fill #barcode -->
           <button class="btn" id="scanInv" data-scan data-scan-target="#barcode">Scan</button>
         </div>
       </div>
-      <div style="flex:0 0 260px;align-self:end" class="row">
+      <div style="flex:0 0 280px;align-self:end" class="row">
         <button class="btn primary" onclick="saveBatch()">➕ Add / Update</button>
         <button class="btn" onclick="clearForm()">Clear</button>
       </div>
     </div>
-    <div class="help" style="color:#475569;font-size:12px">Tip: If Barcode is empty we’ll store <b>NAME|BATCH</b> and print Code128 labels.</div>
+    <div class="row" style="margin-top:6px">
+      <div class="badge">Value: ₹ <span id="valPreview">0.00</span></div>
+    </div>
   </div>
 
   <!-- Filters / Tools -->
   <div class="card" style="background:var(--lav)">
     <div class="row" style="align-items:center">
-      <div style="flex:2 1 320px"><input id="search" class="input" placeholder="Search by product / batch / pack / barcode" oninput="render()"></div>
+      <div style="flex:2 1 320px"><input id="search" class="input" placeholder="Search by product / batch / pack / HSN / barcode" oninput="render()"></div>
       <div style="flex:1 1 160px">
         <select id="filter" class="input" onchange="render()">
           <option value="all">All</option>
@@ -99,7 +112,7 @@ a{color:inherit;text-decoration:none}
           <option value="exp">Expired</option>
         </select>
       </div>
-      <div style="flex:0 0 380px" class="row">
+      <div style="flex:0 0 480px" class="row">
         <button class="btn" onclick="exportCSV()">Export CSV</button>
         <input id="csv" type="file" accept=".csv" class="hide" onchange="importCSV(event)">
         <button class="btn" onclick="document.getElementById('csv').click()">Import CSV</button>
@@ -123,13 +136,18 @@ a{color:inherit;text-decoration:none}
       <thead>
         <tr>
           <th onclick="sortBy('name')">Product</th>
+          <th onclick="sortBy('company')">MFR</th>
+          <th onclick="sortBy('hsn')">HSN</th>
+          <th onclick="sortBy('gst')">GST%</th>
           <th onclick="sortBy('pack')">Pack</th>
           <th onclick="sortBy('batch')">Batch</th>
           <th onclick="sortBy('exp')">EXP</th>
           <th onclick="sortBy('qty')">Qty</th>
           <th onclick="sortBy('mrp')">MRP</th>
           <th onclick="sortBy('rate')">Rate</th>
+          <th>Supplier</th>
           <th>Barcode</th>
+          <th>Value</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -146,18 +164,26 @@ let STOCK=[], sortKey='exp', sortAsc=true;
 
 /* Init */
 load(); render();
+['qty','rate'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+  const q=+gv('qty')||0, r=+gv('rate')||0; document.getElementById('valPreview').textContent=(q*r).toFixed(2);
+}));
 if("serviceWorker" in navigator){navigator.serviceWorker.register("./service-worker.js");}
 
 /* Save / Edit / Delete */
 function saveBatch(){
   const it = {
     name: gv('name').trim(),
+    company: gv('company').trim(),       // treat as MFR
+    mfr: gv('company').trim(),           // mirror for purchases compatibility
     pack: gv('pack').trim(),
     batch: gv('batch').trim().toUpperCase(),
     exp: gv('exp').trim(),
     qty: +gv('qty')||0,
     mrp: +gv('mrp')||0,
     rate:+gv('rate')||0,
+    hsn: (gv('hsn')||'').trim(),
+    gst: +gv('gst')||0,
+    supplier: gv('supplier').trim(),
     barcode: gv('barcode').trim()
   };
   if(!it.name || !it.batch || !it.exp){ alert('Product, Batch, EXP are required'); return; }
@@ -165,12 +191,15 @@ function saveBatch(){
 
   const i=STOCK.findIndex(x=>x.name.toLowerCase()===it.name.toLowerCase() && x.batch===it.batch);
   if(i>=0){
-    STOCK[i].pack=it.pack||STOCK[i].pack;
-    STOCK[i].exp=it.exp||STOCK[i].exp;
-    STOCK[i].qty+=it.qty;
-    STOCK[i].mrp=it.mrp||STOCK[i].mrp;
-    STOCK[i].rate=it.rate||STOCK[i].rate;
-    STOCK[i].barcode=it.barcode||STOCK[i].barcode;
+    // merge + increment qty
+    const t=STOCK[i];
+    t.company = it.company || t.company; t.mfr = it.mfr || t.mfr;
+    t.pack = it.pack || t.pack; t.exp = it.exp || t.exp;
+    t.qty += it.qty;
+    t.mrp = it.mrp || t.mrp; t.rate = it.rate || t.rate;
+    t.hsn = it.hsn || t.hsn; t.gst = it.gst || t.gst;
+    t.supplier = it.supplier || t.supplier;
+    t.barcode = it.barcode || t.barcode;
   }else{
     STOCK.push(it);
   }
@@ -178,7 +207,11 @@ function saveBatch(){
 }
 function editRow(idx){
   const r=STOCK[idx];
-  ['name','pack','batch','exp','qty','mrp','rate','barcode'].forEach(id=>sv(id,r[id]||''));
+  sv('name',r.name||''); sv('company',r.company||r.mfr||''); sv('pack',r.pack||'');
+  sv('batch',r.batch||''); sv('exp',r.exp||''); sv('qty',r.qty||0);
+  sv('mrp',r.mrp||0); sv('rate',r.rate||0); sv('hsn',r.hsn||''); sv('gst',r.gst||'');
+  sv('supplier',r.supplier||''); sv('barcode',r.barcode||'');
+  document.getElementById('valPreview').textContent=((+r.qty||0)*(+r.rate||0)).toFixed(2);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function delRow(idx){ if(!confirm('Delete this batch?'))return; STOCK.splice(idx,1); persist(); render(); }
@@ -189,7 +222,9 @@ async function printRowLabels(idx){
   const labels=[];
   for(let i=0;i< (r.qty>0 ? Math.min(r.qty,24) : 12); i++){
     labels.push(BarcodeLabels.makeLabelHTML({
-      title:r.name, sub:`${r.pack||''} · ${r.batch} · EXP ${r.exp}`, code:r.barcode||`${r.name}|${r.batch}`
+      title:r.name,
+      sub:`${r.pack||''} · ${r.batch} · EXP ${r.exp}`,
+      code:r.barcode||`${r.name}|${r.batch}`
     }));
   }
   await BarcodeLabels.printLabels(labels, {perRow:3, title:`Labels · ${r.name} (${r.batch})`});
@@ -197,7 +232,8 @@ async function printRowLabels(idx){
 async function printFilteredLabels(){
   const term=gv('search').toLowerCase(), filt=gv('filter');
   const list = STOCK.filter(r=>{
-    if(term && !(`${r.name} ${r.batch} ${r.pack} ${r.barcode||''}`.toLowerCase().includes(term))) return false;
+    const hay = `${r.name} ${r.batch} ${r.pack} ${r.hsn||''} ${r.barcode||''}`.toLowerCase();
+    if(term && !hay.includes(term)) return false;
     const isExp = expired(r.exp), isNear=!isExp && nearExpiry(r.exp,2), isLow=(r.qty||0)<=2;
     if(filt==='low' && !isLow) return false;
     if(filt==='near' && !isNear) return false;
@@ -216,7 +252,7 @@ async function printFilteredLabels(){
 function render(){
   STOCK.sort((a,b)=>{
     if(sortKey==='exp') return toExp(a.exp)-toExp(b.exp);
-    if(['mrp','rate','qty'].includes(sortKey)) return (a[sortKey]||0)-(b[sortKey]||0);
+    if(['mrp','rate','qty','gst'].includes(sortKey)) return (a[sortKey]||0)-(b[sortKey]||0);
     return String(a[sortKey]||'').localeCompare(String(b[sortKey]||''),undefined,{numeric:true});
   });
   if(!sortAsc) STOCK.reverse();
@@ -226,7 +262,8 @@ function render(){
   let low=0,near=0,exp=0,shown=0;
 
   STOCK.forEach((r,i)=>{
-    if(term && !(`${r.name} ${r.batch} ${r.pack} ${r.barcode||''}`.toLowerCase().includes(term))) return;
+    const hay = `${r.name} ${r.batch} ${r.pack} ${r.hsn||''} ${r.barcode||''}`.toLowerCase();
+    if(term && !hay.includes(term)) return;
     const isExp=expired(r.exp), isNear=!isExp && nearExpiry(r.exp,2), isLow=(r.qty||0)<=2;
     if(filt==='low' && !isLow) return;
     if(filt==='near' && !isNear) return;
@@ -235,16 +272,23 @@ function render(){
 
     let chip=''; if(isExp) chip='<span class="chip exp">Expired</span>'; else if(isNear) chip='<span class="chip near">Near</span>'; else if(isLow) chip='<span class="chip low">Low</span>';
 
+    const value = ((+r.rate||0) * (+r.qty||0)).toFixed(2);
+
     tb.innerHTML+=`
       <tr>
         <td>${r.name}</td>
+        <td>${r.company||r.mfr||''}</td>
+        <td>${r.hsn||''}</td>
+        <td>${r.gst!=null? r.gst : ''}</td>
         <td>${r.pack||''}</td>
         <td>${r.batch}</td>
         <td>${r.exp}</td>
         <td>${r.qty}</td>
         <td>${(r.mrp||0).toFixed(2)}</td>
         <td>${(r.rate||0).toFixed(2)}</td>
+        <td>${r.supplier||''}</td>
         <td>${r.barcode||''}</td>
+        <td>₹ ${value}</td>
         <td>
           <button class="btn" onclick="editRow(${i})">Edit</button>
           <button class="btn" onclick="printRowLabels(${i})">Print Labels</button>
@@ -262,8 +306,11 @@ function render(){
 
 /* CSV */
 function exportCSV(){
-  const header=['Product','Pack','Batch','EXP','Qty','MRP','Rate','Barcode'];
-  const rows=STOCK.map(r=>[r.name,r.pack||'',r.batch,r.exp,r.qty,r.mrp,r.rate,r.barcode||'']);
+  const header=['Product','MFR','HSN','GST','Pack','Batch','EXP','Qty','MRP','Rate','Supplier','Barcode'];
+  const rows=STOCK.map(r=>[
+    r.name, (r.company||r.mfr||''), (r.hsn||''), (r.gst!=null?r.gst:''), r.pack||'', r.batch, r.exp,
+    r.qty, r.mrp, r.rate, r.supplier||'', r.barcode||''
+  ]);
   const csv=[header].concat(rows).map(a=>a.map(x=>String(x).replaceAll('"','""')).map(x=>`"${x}"`).join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'}), url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='inventory.csv'; a.click(); URL.revokeObjectURL(url);
@@ -276,12 +323,16 @@ function importCSV(ev){
     const [h,...rows]=lines;
     rows.forEach(line=>{
       const cols=parseCSV(line);
-      const [name,pack,batch,exp,qty,mrp,rate,barcode]=cols;
+      const [name,mfr,hsn,gst,pack,batch,exp,qty,mrp,rate,supplier,barcode]=cols;
       if(!name||!batch||!exp)return;
-      const it={name,pack,batch,exp,qty:+qty||0,mrp:+mrp||0,rate:+rate||0,barcode:barcode||`${name}|${batch}`};
+      const it={name,company:mfr,mfr,hsn, gst:(gst===''? '' : +gst||0), pack,batch,exp,qty:+qty||0,mrp:+mrp||0,rate:+rate||0,supplier,barcode:barcode||`${name}|${batch}`};
       const i=STOCK.findIndex(s=>s.name.toLowerCase()===name.toLowerCase() && s.batch===batch);
-      if(i>=0){ STOCK[i].qty+=it.qty; STOCK[i].mrp=it.mrp; STOCK[i].rate=it.rate; STOCK[i].pack=it.pack; STOCK[i].exp=it.exp; STOCK[i].barcode=it.barcode; }
-      else STOCK.push(it);
+      if(i>=0){
+        Object.assign(STOCK[i], {company:mfr,mfr,hsn, gst:(gst===''? STOCK[i].gst : (+gst||0)), pack,exp,supplier});
+        STOCK[i].qty+=it.qty; STOCK[i].mrp=it.mrp; STOCK[i].rate=it.rate; STOCK[i].barcode=it.barcode;
+      } else {
+        STOCK.push(it);
+      }
     });
     persist(); render(); ev.target.value='';
   };
@@ -298,7 +349,7 @@ function parseCSV(line){
   out.push(cur); return out;
 }
 
-/* Persist */
+/* Persist / Load */
 function persist(){
   localStorage.setItem('pharma_stock_json', JSON.stringify(STOCK));
   localStorage.setItem('pharma_stock_meta', JSON.stringify({total:STOCK.length}));
@@ -309,17 +360,19 @@ function load(){ try{ STOCK=JSON.parse(localStorage.getItem('pharma_stock_json')
 /* Utils */
 function gv(id){ return document.getElementById(id).value; }
 function sv(id,v){ document.getElementById(id).value=v; }
-function clearForm(){ ['name','pack','batch','exp','qty','mrp','rate','barcode'].forEach(id=>sv(id,'')); }
+function clearForm(){ ['name','company','pack','batch','exp','qty','mrp','rate','hsn','gst','supplier','barcode'].forEach(id=>sv(id,'')); document.getElementById('valPreview').textContent='0.00'; }
 function toExp(mmYY){ const [m,y]=String(mmYY).split('/').map(n=>parseInt(n,10)); return new Date(2000+(y||0),(m?m-1:0),1); }
 function expired(mmYY){ const d=toExp(mmYY); d.setMonth(d.getMonth()+1,0); return d<new Date(); }
 function nearExpiry(mmYY,months=2){ if(expired(mmYY)) return false; const d=toExp(mmYY), t=new Date(); const diff=(d.getFullYear()-t.getFullYear())*12 + (d.getMonth()-t.getMonth()); return diff<=months; }
 function sortBy(k){ if(sortKey===k) sortAsc=!sortAsc; else { sortKey=k; sortAsc=true; } render(); }
 </script>
 
-<!-- ===== Engines + Wiring (outside of inline JS) ===== -->
+<!-- Engines + Wiring -->
 <script src="/scripts/qrcode.min.js?v=1.1"></script>
 <script src="/scripts/barcode.js?v=8.4.6"></script>
+<script src="/scripts/scanner.js?v=1.0"></script>
 <script src="/scripts/app-wiring.js?v=1.1"></script>
 <script src="/scripts/seed-and-diagnostics.js?v=1.3"></script>
+<script src="/scripts/shortcuts.js?v=1.0"></script>
 </body>
 </html>

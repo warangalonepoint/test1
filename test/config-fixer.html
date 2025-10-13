@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CouchDB URL Auto-Encoder + Quick Test</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body{font:14px/1.45 system-ui;margin:0;background:#f7f8fb;color:#0f172a}
+  .wrap{max-width:880px;margin:18px auto;padding:0 12px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.06);padding:14px;margin:12px 0}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  input,button{font:14px system-ui}
+  input[type=text],input[type=password]{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px}
+  .btn{padding:8px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-weight:700;cursor:pointer}
+  .btn.primary{background:#139a5b;color:#fff;border:none}
+  .ok{color:#0a7a3c;font-weight:700}
+  .err{color:#b42318;font-weight:700}
+  pre{background:#0b1220;color:#def1ff;padding:10px;border-radius:8px;overflow:auto}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+</style>
+<!-- load your app config -->
+<script src="../config/config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h2>CouchDB URL Auto-Encoder + Quick Test</h2>
+  <div class="card">
+    <div><b>From config:</b> <span id="seen" class="mono">—</span></div>
+    <div style="margin-top:8px" class="row">
+      <div style="flex:2 1 340px">
+        <label>Base URL (no creds, e.g. http://192.168.1.5:5984)</label>
+        <input id="host" type="text" placeholder="http://192.168.1.5:5984">
+      </div>
+      <div style="flex:1 1 160px">
+        <label>Username</label>
+        <input id="user" type="text" placeholder="admin">
+      </div>
+      <div style="flex:1 1 200px">
+        <label>Password</label>
+        <input id="pass" type="password" placeholder="••••••">
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="btnLoad">Load from APP_CONFIG</button>
+      <button class="btn" id="btnEncode">Encode + Build couchUrl</button>
+      <button class="btn primary" id="btnApply">Apply to runtime</button>
+      <button class="btn" id="btnCopy">Copy line for config.js</button>
+    </div>
+    <div style="margin-top:8px">
+      <div><b>Resulting couchUrl:</b> <span id="built" class="mono">—</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:6px 0">Quick Connectivity Tests</h3>
+    <div class="row">
+      <button class="btn" id="t1">Ping /_up</button>
+      <button class="btn" id="t2">List Databases</button>
+      <button class="btn" id="t3">Write test doc to &lt;prefix&gt;-patients</button>
+    </div>
+    <div id="status" style="margin-top:10px"></div>
+    <pre id="log">Ready.</pre>
+  </div>
+
+  <p style="opacity:.7">Tip: if your password has characters like <code>@ &amp; # !</code>, they must be URL-encoded. This page does that for you.</p>
+</div>
+
+<script>
+(function(){
+  const out = (msg, cls) => {
+    const s=document.getElementById('status');
+    s.className = cls || '';
+    s.textContent = msg;
+  };
+  const log = (v)=> {
+    const pre=document.getElementById('log');
+    pre.textContent = (typeof v==='string')? v : JSON.stringify(v,null,2);
+  };
+  // Load initial
+  const cfg = (window.APP_CONFIG||{});
+  const seen = cfg.couchUrl || '(not set)';
+  document.getElementById('seen').textContent = seen;
+  try{
+    // Parse config (if present)
+    if (cfg.couchUrl) {
+      const m = cfg.couchUrl.match(/^https?:\/\/(?:(.+?):(.*?)@)?([^/]+)$/i);
+      if (m) {
+        const [,u,p,h] = m;
+        document.getElementById('host').value = (h ? (cfg.couchUrl.split('@').pop()) : cfg.couchUrl);
+        if (h) document.getElementById('host').value = 'http://' + h;
+        if (u) document.getElementById('user').value = decodeURIComponent(u);
+        if (p) document.getElementById('pass').value = decodeURIComponent(p);
+      }
+    }
+  }catch{}
+
+  function build(){
+    let host = document.getElementById('host').value.trim();
+    let user = document.getElementById('user').value.trim();
+    let pass = document.getElementById('pass').value;
+    if (!/^https?:\/\//i.test(host)) host = 'http://' + host;
+    const encUser = encodeURIComponent(user);
+    const encPass = encodeURIComponent(pass);
+    const url = user ? `${host.replace(/\/$/,'').replace(/\/_+$/,'')}`.replace(/\/$/,'')
+                 .replace(/^http:\/\//,'http://'+encUser+':'+encPass+'@')
+                 .replace(/^https:\/\//,'https://'+encUser+':'+encPass+'@')
+               : host.replace(/\/$/,'');
+    document.getElementById('built').textContent = url;
+    return url;
+  }
+
+  document.getElementById('btnLoad').onclick = ()=>{
+    if (!cfg.couchUrl){ out('APP_CONFIG.couchUrl not set', 'err'); return; }
+    const m = cfg.couchUrl.match(/^https?:\/\/(?:(.+?):(.*?)@)?([^/]+)$/i);
+    if (m) {
+      const [,u,p,h] = m;
+      document.getElementById('host').value = 'http://' + h;
+      document.getElementById('user').value = u?decodeURIComponent(u):'';
+      document.getElementById('pass').value = p?decodeURIComponent(p):'';
+      out('Loaded from APP_CONFIG', 'ok');
+    } else {
+      out('Could not parse APP_CONFIG.couchUrl', 'err');
+    }
+  };
+
+  document.getElementById('btnEncode').onclick = ()=>{
+    const url=build();
+    out('Encoded + built', 'ok'); log(url);
+  };
+
+  document.getElementById('btnApply').onclick = ()=>{
+    const url=build();
+    window.APP_CONFIG = window.APP_CONFIG || {};
+    window.APP_CONFIG.couchUrl = url;
+    out('Applied at runtime. (Remember to paste into config.js to persist)', 'ok');
+  };
+
+  document.getElementById('btnCopy').onclick = ()=>{
+    const url=build();
+    const line = `APP_CONFIG.couchUrl = "${url}";`;
+    navigator.clipboard.writeText(line).then(()=>{
+      out('Copied line for config.js', 'ok'); log(line);
+    });
+  };
+
+  // ---- Tests
+  async function fetchJSON(u, opts){
+    const r = await fetch(u, { ...opts, headers:{'Accept':'application/json', ...(opts&&opts.headers)} });
+    const t = await r.text();
+    let j; try{ j = JSON.parse(t); }catch{ j = t; }
+    if (!r.ok) throw {status:r.status, body:j};
+    return j;
+  }
+  function base(){ const url = (window.APP_CONFIG&&window.APP_CONFIG.couchUrl)||document.getElementById('built').textContent.trim(); return url.replace(/\/$/,''); }
+  function prefix(){ return (window.APP_CONFIG&&window.APP_CONFIG.dbPrefix) || 'clinic'; }
+
+  document.getElementById('t1').onclick = async ()=>{
+    out('Pinging /_up ...');
+    try{
+      const j = await fetchJSON(base()+'/_up');
+      out('Server OK', 'ok'); log(j);
+    }catch(e){ out('Ping failed', 'err'); log(e); }
+  };
+
+  document.getElementById('t2').onclick = async ()=>{
+    out('Listing databases ...');
+    try{
+      const j = await fetchJSON(base()+'/_all_dbs');
+      out('Listed', 'ok'); log(j);
+    }catch(e){ out('List failed', 'err'); log(e); }
+  };
+
+  document.getElementById('t3').onclick = async ()=>{
+    out('Write test to <prefix>-patients ...');
+    try{
+      const db = `${prefix()}-patients`;
+      const id = 'selftest-'+Date.now();
+      const j = await fetchJSON(base()+'/'+db+'/'+id, {method:'PUT', body: JSON.stringify({ok:true,ts:Date.now()}), headers:{'Content-Type':'application/json'}});
+      out('Write OK', 'ok'); log(j);
+    }catch(e){ out('Write failed', 'err'); log(e); }
+  };
+})();
+</script>
+</body>
+</html>

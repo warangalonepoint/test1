@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="./config/config.js"></script>
+<script src="./scripts/db.js"></script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Clinic Home · PWA</title>
@@ -47,6 +49,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
 /* Footer */
 .footer{text-align:center;padding:14px 4px;font-size:13px;color:#64748b;margin:18px 0}
 </style>
+<script src="/scripts/app-wiring.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -75,7 +78,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
         <h3>Dashboard</h3>
         <div class="desc">KPIs · Collections · Lab income · Pharmacy sales · OPD insights</div>
         <div class="row">
-          <a class="btn primary" id="goDashboard" href="./dashboard.html">Open Dashboard</a>
+          <a class="btn primary" id="goDashboard" href="./dashboard.html">Open </a>
         </div>
       </div>
 
@@ -84,7 +87,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
         <h3>Supervisor Hub</h3>
         <div class="desc">Access to Bookings, Booking Status (TV feed), OPD Records, Lab Hub & Pharmacy</div>
         <div class="row">
-          <a class="btn primary" id="goSupervisor" href="./supervisor-hub.html">Open Supervisor Hub</a>
+          <a class="btn primary" id="goSupervisor" href="./supervisor-hub.html">Open </a>
         </div>
       </div>
 
@@ -93,7 +96,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
         <h3>Front Office</h3>
         <div class="desc">Bookings · Status updates · TV display control</div>
         <div class="row">
-          <a class="btn primary" id="goFrontOffice" href="./frontoffice.html">Open Front Office</a>
+          <a class="btn primary" id="goFrontOffice" href="./frontoffice.html">Open </a>
         </div>
       </div>
     </div>
@@ -157,6 +160,6 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink);min
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/service-worker.js").catch(console.error);
 }
-</script>
-</body>
+     
+</script></body>
 </html>

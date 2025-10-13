@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="./config/config.js"></script>
+<script src="./scripts/db.js"></script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Lab Tests · Parameter Entry</title>
@@ -35,7 +37,9 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
 .footer{text-align:center;padding:14px 4px;font-size:13px;color:#64748b;margin:18px 0}
 .badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
 .stickbar{position:sticky;bottom:10px;display:flex;gap:8px;justify-content:flex-end}
+.totalpill{font-weight:800}
 </style>
+<script src="/scripts/app-wiring.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -46,7 +50,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
       <img class="logo" src="./assets/logo.png" alt="logo">
       <div>
         <div style="font-weight:700;font-size:18px">Lab Tests · Parameter Entry</div>
-        <div class="small">Select a test · Tick parameters · Enter results · Save/Print</div>
+        <div class="small">Auto-feed OPD orders · Tick parameters · Enter results · Save/Print</div>
       </div>
     </div>
     <a class="btn" href="./lab-hub.html">Back</a>
@@ -67,6 +71,13 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
       <div style="flex:1 1 220px"><label>Ref By</label><input id="pref" class="input" placeholder="Doctor / Self"></div>
       <div style="flex:0 0 150px"><label>Date</label><input id="pdate" class="input" type="date"></div>
     </div>
+
+    <!-- OPD auto-feed controls -->
+    <div class="row" style="margin-top:8px;align-items:center">
+      <div class="badge" id="qinfo">OPD Orders: 0 pending</div>
+      <button class="btn" id="btnLoadNext">Load Next OPD Order</button>
+      <div class="badge totalpill" id="totalBadge">Total: ₹ 0</div>
+    </div>
   </div>
 
   <!-- Parameters -->
@@ -76,6 +87,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
         <label>Select Test</label>
         <select id="testSel" class="input"></select>
       </div>
+      <div class="badge" id="priceBadge">₹ 0</div>
       <div class="badge" id="pcount">0 params</div>
       <button class="btn primary" id="btnAdd">Add to Report</button>
     </div>
@@ -102,7 +114,7 @@ body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
 </div>
 
 <script>
-/* ========= Test → Parameters (from poster + common ranges) ========= */
+/* ========= Test → Parameters ========= */
 const TEST_PARAMS = {
   "CBP":[
     {k:"hb",lab:"Hemoglobin",norm:"12 – 18 g/dL",unit:"g/dL"},
@@ -117,9 +129,7 @@ const TEST_PARAMS = {
     {k:"bas",lab:"Basophile",norm:"0 – 1 %"},
     {k:"esr",lab:"ESR",norm:"0 – 10 mm/hr"}
   ],
-  "CRP":[
-    {k:"crp",lab:"CRP",norm:"< 6 mg/L",unit:"mg/L"}
-  ],
+  "CRP":[{k:"crp",lab:"CRP",norm:"< 6 mg/L",unit:"mg/L"}],
   "TYPHOID IgM IgG":[
     {k:"ty_igm",lab:"Typhoid IgM",norm:"Negative"},
     {k:"ty_igg",lab:"Typhoid IgG",norm:"Negative"}
@@ -134,12 +144,8 @@ const TEST_PARAMS = {
     {k:"ur_wbc",lab:"Pus Cells",norm:"0 – 5 /HPF"},
     {k:"ur_rbc",lab:"RBC",norm:"0 – 2 /HPF"}
   ],
-  "RBS":[
-    {k:"rbs",lab:"Random Blood Sugar",norm:"< 140 mg/dL",unit:"mg/dL"}
-  ],
-  "TSB":[
-    {k:"tsb",lab:"Total Bilirubin",norm:"0.3 – 1.2 mg/dL",unit:"mg/dL"}
-  ],
+  "RBS":[{k:"rbs",lab:"Random Blood Sugar",norm:"< 140 mg/dL",unit:"mg/dL"}],
+  "TSB":[{k:"tsb",lab:"Total Bilirubin",norm:"0.3 – 1.2 mg/dL"}],
   "DENGUE IgM IgG":[
     {k:"den_igm",lab:"Dengue IgM",norm:"Negative"},
     {k:"den_igg",lab:"Dengue IgG",norm:"Negative"},
@@ -154,12 +160,8 @@ const TEST_PARAMS = {
     {k:"t4",lab:"T4",norm:"5.1 – 14.1 µg/dL"},
     {k:"tsh",lab:"TSH",norm:"0.4 – 4.0 µIU/mL"}
   ],
-  "URINE C/S AUTOMATED":[
-    {k:"cs_auto",lab:"Culture & Sensitivity (Automated)",norm:"No growth / Sensitive"}
-  ],
-  "URINE C/S CONVENTION":[
-    {k:"cs_conv",lab:"Culture & Sensitivity (Conventional)",norm:"No growth / Sensitive"}
-  ],
+  "URINE C/S AUTOMATED":[{k:"cs_auto",lab:"Culture & Sensitivity (Automated)",norm:"No growth / Sensitive"}],
+  "URINE C/S CONVENTION":[{k:"cs_conv",lab:"Culture & Sensitivity (Conventional)",norm:"No growth / Sensitive"}],
   "LFT":[
     {k:"tbil",lab:"Total Bilirubin",norm:"0.3 – 1.2 mg/dL"},
     {k:"dbil",lab:"Direct Bilirubin",norm:"0.0 – 0.3 mg/dL"},
@@ -169,12 +171,8 @@ const TEST_PARAMS = {
     {k:"tp",lab:"Total Protein",norm:"6.0 – 8.3 g/dL"},
     {k:"alb",lab:"Albumin",norm:"3.5 – 5.0 g/dL"}
   ],
-  "CREATININE":[
-    {k:"crt",lab:"Serum Creatinine",norm:"0.7 – 1.3 mg/dL"}
-  ],
-  "HBA1C":[
-    {k:"hba1c",lab:"HbA1c",norm:"4.0 – 5.6 %"}
-  ],
+  "CREATININE":[{k:"crt",lab:"Serum Creatinine",norm:"0.7 – 1.3 mg/dL"}],
+  "HBA1C":[{k:"hba1c",lab:"HbA1c",norm:"4.0 – 5.6 %"}],
   "LIPID PROFILE":[
     {k:"chol",lab:"Total Cholesterol",norm:"< 200 mg/dL"},
     {k:"hdl",lab:"HDL",norm:">= 40 mg/dL"},
@@ -186,18 +184,34 @@ const TEST_PARAMS = {
     {k:"k", lab:"Potassium (K+)",norm:"3.5 – 5.1 mmol/L"},
     {k:"cl",lab:"Chloride (Cl-)",norm:"98 – 106 mmol/L"}
   ],
-  "BLOOD GROUPING":[
-    {k:"bg",lab:"Blood Group",norm:"—"}
-  ]
+  "BLOOD GROUPING":[{k:"bg",lab:"Blood Group",norm:"—"}]
 };
 
-/* ====== Populate tests ====== */
+/* ===== Prices: read from lab catalog (lab_tests_json) with poster fallbacks ===== */
+function loadCatalog(){
+  let arr=[]; try{arr=JSON.parse(localStorage.getItem('lab_tests_json')||'[]');}catch{}
+  if(!Array.isArray(arr)) arr=[];
+  const map=new Map(arr.map(x=>[String(x.name||'').trim().toUpperCase(), +x.price||0]));
+  // poster fallback defaults (won't overwrite user catalog)
+  [
+    ['CBP',300],['CRP',400],['TYPHOID IgM IgG',300],['CUE',150],['RBS',50],['TSB',300],
+    ['DENGUE IgM IgG',800],['MALARIA FOR Pv Pf',800],['T3, T4, TSH',500],
+    ['URINE C/S AUTOMATED',1100],['URINE C/S CONVENTION',700],['LFT',250],['CREATININE',150],
+    ['HBA1C',550],['LIPID PROFILE',550],['SERUM ELECTROLYTES',100],['BLOOD GROUPING',100]
+  ].forEach(([n,p])=>{ if(!map.has(n)) map.set(n,p); });
+  return map;
+}
+let PRICE_MAP = loadCatalog();
+function priceOf(test){ return PRICE_MAP.get(String(test||'').toUpperCase())||0; }
+
+/* ===== Populate tests ===== */
 const testSel = document.getElementById('testSel');
 Object.keys(TEST_PARAMS).forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; testSel.appendChild(o); });
 testSel.value = "CBP";
 
-/* ====== Render parameter rows ====== */
+/* ===== Render parameter rows + price badge ===== */
 const paramBox = document.getElementById('paramBox');
+const priceBadge = document.getElementById('priceBadge');
 function renderParams(){
   paramBox.innerHTML='';
   const list = TEST_PARAMS[testSel.value]||[];
@@ -212,11 +226,12 @@ function renderParams(){
     paramBox.appendChild(wrap);
   });
   document.getElementById('pcount').textContent = list.length+' params';
+  priceBadge.textContent = '₹ '+ priceOf(testSel.value);
 }
 renderParams();
 testSel.addEventListener('change', renderParams);
 
-/* ====== Preview buffer ====== */
+/* ===== Preview buffer ===== */
 let PREVIEW=[];
 const prevTBody=document.querySelector('#prevTable tbody');
 function redrawPreview(){
@@ -224,6 +239,7 @@ function redrawPreview(){
   PREVIEW.forEach(r=>{
     prevTBody.insertAdjacentHTML('beforeend', `<tr><td>${r.test}</td><td>${r.lab}</td><td>${r.result}</td><td>${r.norm||''}</td></tr>`);
   });
+  updateTotalBadge();
 }
 function addSelectedToPreview(){
   const tn = testSel.value;
@@ -238,6 +254,18 @@ function addSelectedToPreview(){
   redrawPreview();
 }
 
+/* ===== Totals by test ===== */
+function selectedTestsFromPreview(){
+  const set=new Set(PREVIEW.map(x=>x.test));
+  return [...set];
+}
+function totalAmount(){
+  return selectedTestsFromPreview().reduce((s,t)=>s+priceOf(t),0);
+}
+function updateTotalBadge(){
+  document.getElementById('totalBadge').textContent = 'Total: ₹ '+ totalAmount();
+}
+
 /* Buttons */
 document.getElementById('btnAdd').onclick=()=>{ addSelectedToPreview(); alert('Added to report'); };
 document.getElementById('btnClear').onclick=()=>{ PREVIEW=[]; redrawPreview(); };
@@ -247,6 +275,7 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 function val(id){ const el=document.getElementById(id); return el?el.value:''; }
 function buildPayload(){
   const date = val('pdate') || todayISO();
+  const tests = selectedTestsFromPreview().map(t=>({name:t, price:priceOf(t)}));
   return {
     id: 'LAB'+Date.now(),
     name: val('pname')||'',
@@ -255,6 +284,8 @@ function buildPayload(){
     age: val('page')||'',
     ref: val('pref')||'',
     date,
+    tests,
+    total: tests.reduce((s,x)=>s+(+x.price||0),0),
     items: PREVIEW.slice()
   };
 }
@@ -289,8 +320,56 @@ document.getElementById('btnSave').onclick = ()=>{
   window.location.href='./lab-records.html';
 };
 
+/* ===== OPD auto-feed (shared queue) ===== */
+const QKEY='lab_orders_queue';
+function loadQueue(){ let arr=[]; try{arr=JSON.parse(localStorage.getItem(QKEY)||'[]');}catch{} return Array.isArray(arr)?arr:[]; }
+function saveQueue(arr){ localStorage.setItem(QKEY, JSON.stringify(arr)); }
+function refreshQueueBadge(){ const n=loadQueue().length; document.getElementById('qinfo').textContent = `OPD Orders: ${n} pending`; }
+
+function applyOrder(o){
+  // patient lines
+  document.getElementById('pname').value = o.name||'';
+  document.getElementById('ppid').value  = o.pid||'';
+  document.getElementById('pref').value  = (o.ref||o.refBy||'OPD')+'';
+  document.getElementById('pdate').value = todayISO();
+
+  // put tests into preview (empty results, norms shown)
+  (o.items||[]).forEach(x=>{
+    const test = x.test || x.name || x;
+    if(!TEST_PARAMS[test]) return;
+    TEST_PARAMS[test].forEach(p=>{
+      PREVIEW.push({ test, lab:p.lab, result:"", norm:p.norm||"" });
+    });
+  });
+  redrawPreview();
+  alert(`Loaded OPD order for ${o.pid||''} · ${o.name||''}`);
+}
+
+function loadNextOrder(pop=true){
+  const q=loadQueue();
+  if(!q.length){ alert('No pending OPD orders'); return; }
+  const order = q.shift();        // latest/oldest – queue style
+  if(pop) saveQueue(q);
+  applyOrder(order);
+  refreshQueueBadge();
+}
+
+document.getElementById('btnLoadNext').onclick = ()=> loadNextOrder(true);
+
+/* Auto-load first pending order on entry (without clicking) */
+(function autoLoadAtStart(){
+  refreshQueueBadge();
+  const q=loadQueue();
+  if(q.length && !PREVIEW.length && !document.getElementById('pname').value){
+    loadNextOrder(true);
+  }
+})();
+
 /* init date */
 document.getElementById('pdate').value = todayISO();
+
+/* In case catalog changes while page is open */
+window.addEventListener('storage', (e)=>{ if(e.key==='lab_tests_json'){ PRICE_MAP=loadCatalog(); renderParams(); updateTotalBadge(); }});
 </script>
 </body>
 </html>

@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lab Hub · Orders & Results</title>
+
+  <!-- Your config + DB (must exist) -->
+  <script src="./config/config.js"></script>
+  <script src="./scripts/db.js"></script>
+
+  <style>
+    :root{
+      --bg:#f7f8fb; --card:#fff; --ink:#0f172a; --muted:#64748b; --primary:#17B26A;
+      --r:14px; --shadow:0 6px 18px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font:14px/1.45 system-ui;background:var(--bg);color:var(--ink)}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1100px;margin:0 auto;padding:12px}
+    .top{display:flex;align-items:center;gap:10px;background:#EEF2FF;border:1px solid #e5e7eb;
+         border-radius:16px;padding:10px 12px;box-shadow:var(--shadow);margin:8px 0 12px}
+    .top img{height:36px}
+    .top .t1{font-weight:800}
+    .row{display:flex;flex-wrap:wrap;gap:10px}
+    .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:12px;margin:8px 0}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    .input, select, textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px}
+    .btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:7px 14px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--primary);border:none;color:#fff}
+    .btn.ghost{background:#fff}
+    .btn.small{padding:5px 10px;font-size:12px}
+    .badge{display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
+    .table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+    .table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
+    .table th{background:#f8fafc}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+    .s-ordered{background:#FFF7D6;border:1px solid #FACC15}
+    .s-processing{background:#E0F2FE;border:1px solid #38BDF8}
+    .s-reported{background:#DCFCE7;border:1px solid #4ADE80}
+    .s-collected{background:#FFE8D9;border:1px solid #FB923C}
+    @media (max-width:720px){ .table{font-size:12px} }
+    .footer{color:var(--muted);font-size:12px;text-align:center;margin:18px 0}
+    .tests-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;max-height:220px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:8px;background:#fafafa}
+    .tests-grid label{display:flex;gap:6px;align-items:center;cursor:pointer;margin:0}
+    .right-pane{min-width:280px;flex:1}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <img src="./assets/logo.png" alt="logo">
+    <div>
+      <div class="t1">Lab Hub — Orders & Results</div>
+      <div class="t2" style="font-size:12px;color:var(--muted)">Catalog · Orders · Worklist · Results · Billing (basic)</div>
+    </div>
+    <div style="margin-left:auto" class="row">
+      <a class="btn" href="./index.html">Home</a>
+    </div>
+  </div>
+
+  <!-- Place Order -->
+  <div class="card">
+    <h3 style="margin:4px 0 10px">Place Lab Order</h3>
+    <div class="row">
+      <div style="flex:1 1 180px">
+        <label>Patient PID</label>
+        <input id="pid" class="input" placeholder="P00001">
+      </div>
+      <div style="flex:1 1 180px">
+        <label>Department</label>
+        <select id="dept" class="input">
+          <option>Hematology</option><option>Biochemistry</option><option>Microbiology</option><option>General</option>
+        </select>
+      </div>
+      <div style="flex:1 1 180px">
+        <label>Sample Type</label>
+        <input id="sampleType" class="input" placeholder="Serum / EDTA / Urine …">
+      </div>
+      <div style="flex:1 1 160px">
+        <label>Date</label>
+        <input id="orderDate" type="date" class="input">
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <label>Pick Tests / Panels (from Masters)</label>
+      <div id="testsBox" class="tests-grid"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn primary" onclick="placeOrder()">➕ Create Order</button>
+    </div>
+  </div>
+
+  <!-- Worklist + Results -->
+  <div class="row">
+    <div class="card" style="flex:2 1 520px">
+      <div class="row" style="align-items:center;justify-content:space-between">
+        <div>
+          <span class="badge">Worklist</span>
+        </div>
+        <div class="row" style="align-items:center">
+          <label for="fltDate" style="margin:0 6px 0 0">Date</label>
+          <input id="fltDate" type="date" class="input" style="width:160px">
+          <button class="btn" onclick="loadWorklist()">Refresh</button>
+        </div>
+      </div>
+
+      <table class="table" id="queueTbl">
+        <thead>
+          <tr><th>Order</th><th>PID</th><th>Dept</th><th>Status</th><th>Tests</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Result Entry -->
+    <div class="card right-pane">
+      <h3 style="margin:4px 0 8px">Result Entry</h3>
+      <div id="resNone" class="badge">Select an order from the worklist</div>
+      <div id="resBox" style="display:none">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px">
+          <span id="resHdr"></span>
+        </div>
+        <div id="resTests"></div>
+        <div class="row" style="justify-content:flex-end;margin-top:8px">
+          <button class="btn" onclick="saveDraft()">Save Draft</button>
+          <button class="btn primary" onclick="saveReported()">Save & Mark Reported</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 Onestop AI Services · Lab Hub</div>
+</div>
+
+<script>
+  // helpers
+  const q = s => document.querySelector(s);
+  const el = (h) => { const d=document.createElement('div'); d.innerHTML=h.trim(); return d.firstChild; };
+  const money = n => ( +n || 0 ).toFixed(2);
+  const todayISO = () => new Date().toISOString().slice(0,10);
+
+  let MASTERS = [];     // all tests/panels
+  let CURRENT_ORDER = null; // order object in result editor
+
+  // init dates
+  q('#orderDate').value = todayISO();
+  q('#fltDate').value = todayISO();
+
+  // load masters -> checkboxes
+  async function loadMasters(){
+    try{
+      MASTERS = await DB.lab.listMasters();
+      MASTERS.sort((a,b)=> String(a.name||a.code).localeCompare(String(b.name||b.code)));
+      const box = q('#testsBox'); box.innerHTML='';
+      MASTERS.forEach(m=>{
+        const id = `t_${m._id.replace(/\W/g,'_')}`;
+        box.appendChild(el(`<label><input type="checkbox" value="${m.code}" data-kind="${m.kind||'TEST'}" id="${id}"><span>${m.name||m.code}</span> <span class="badge" style="margin-left:6px">${m.kind||'TEST'}</span></label>`));
+      });
+    }catch(e){
+      console.warn('masters load failed', e);
+      q('#testsBox').innerHTML = '<div class="badge">No masters yet. Add in lab masters DB.</div>';
+    }
+  }
+
+  async function placeOrder(){
+    const pid = q('#pid').value.trim();
+    if(!pid){ alert('Enter PID'); return; }
+    const dept = q('#dept').value.trim() || 'General';
+    const sample = q('#sampleType').value.trim();
+    const date = q('#orderDate').value || todayISO();
+    const tests = [...document.querySelectorAll('#testsBox input[type=checkbox]:checked')].map(i=>i.value);
+    if(!tests.length){ alert('Pick at least one test/panel'); return; }
+    const orderId = await DB.lab.placeOrder({ pid, dept, sample:{type:sample}, tests, date });
+    alert('Order created: ' + orderId);
+    document.querySelectorAll('#testsBox input:checked').forEach(i=>i.checked=false);
+    loadWorklist();
+  }
+
+  async function loadWorklist(){
+    const d = q('#fltDate').value || todayISO();
+    // Fetch orders for date and join queue + show tests
+    const list = await DB.lab.ordersByDate(d);
+    // we also need queue items for status/dept; build a map
+    const byId = {};
+    // naive: pendingQueue() returns non-reported; we also want same-date
+    const qAll = await DB.lab.pendingQueue(); // may include other dates
+    qAll.forEach(r=>{ byId[r.orderId] = r; });
+    const tb = q('#queueTbl tbody'); tb.innerHTML='';
+    list.sort((a,b)=>a.ts-b.ts);
+    for(const o of list){
+      const qrow = byId[o._id] || {status:o.status, dept:o.dept||'—'};
+      const tests = (o.tests||[]).join(', ');
+      const pill = stPill(qrow.status||o.status||'ordered');
+      const tr = el(`<tr>
+        <td>${o._id}</td>
+        <td>${o.pid||''}</td>
+        <td>${qrow.dept||'—'}</td>
+        <td>${pill}</td>
+        <td>${tests}</td>
+        <td class="row" style="gap:6px">
+          <button class="btn small" onclick="updStatus('${o._id}','collected')">Collect</button>
+          <button class="btn small" onclick="updStatus('${o._id}','processing')">Process</button>
+          <button class="btn small" onclick="openResults('${o._id}')">Results</button>
+        </td>
+      </tr>`);
+      tb.appendChild(tr);
+    }
+  }
+
+  function stPill(s){
+    const cls = s==='reported'?'s-reported': s==='processing'?'s-processing': s==='collected'?'s-collected':'s-ordered';
+    return `<span class="pill ${cls}">${s}</span>`;
+  }
+
+  async function updStatus(orderId, st){
+    await DB.lab.setOrderStatus(orderId, st);
+    await loadWorklist();
+    if(CURRENT_ORDER && CURRENT_ORDER._id===orderId){
+      CURRENT_ORDER.status = st;
+      showResultBox(CURRENT_ORDER);
+    }
+  }
+
+  async function openResults(orderId){
+    // Get order and populate tests list for entry
+    const d = q('#fltDate').value || todayISO();
+    const list = await DB.lab.ordersByDate(d);
+    const ord = list.find(x=>x._id===orderId) || await (async()=>null)();
+    if(!ord){ alert('Order not found for selected date'); return; }
+    CURRENT_ORDER = ord;
+    showResultBox(ord);
+  }
+
+  function showResultBox(ord){
+    q('#resNone').style.display='none';
+    q('#resBox').style.display='block';
+    q('#resHdr').textContent = `${ord._id} · PID ${ord.pid} · ${ord.tests.length} item(s)`;
+    const tests = ord.tests || [];
+    const masterMap = Object.fromEntries(MASTERS.map(m=>[m.code, m]));
+    const host = q('#resTests'); host.innerHTML='';
+    tests.forEach(code=>{
+      const m = masterMap[code] || {name:code, unit:''};
+      const row = el(`
+        <div class="row" style="align-items:center;margin:4px 0">
+          <div style="flex:1 1 160px"><div style="font-weight:700">${m.name||code}</div><div style="font-size:12px;color:var(--muted)">${code}</div></div>
+          <div style="flex:0 0 120px">
+            <label>Value</label>
+            <input class="input res-value" data-code="${code}" placeholder="—">
+          </div>
+          <div style="flex:0 0 100px">
+            <label>Unit</label>
+            <input class="input" value="${m.unit||''}" readonly>
+          </div>
+          <div style="flex:1 1 140px">
+            <label>Flag</label>
+            <select class="input res-flag" data-code="${code}">
+              <option value="">—</option>
+              <option>H</option><option>L</option><option>CRIT</option>
+            </select>
+          </div>
+        </div>
+      `);
+      host.appendChild(row);
+    });
+  }
+
+  async function saveDraft(){
+    if(!CURRENT_ORDER){ alert('Open an order first'); return; }
+    const res = collectResults('drafted');
+    await DB.lab.saveResult(res);
+    alert('Draft saved');
+  }
+  async function saveReported(){
+    if(!CURRENT_ORDER){ alert('Open an order first'); return; }
+    const res = collectResults('reported');
+    await DB.lab.saveResult(res);
+    await DB.lab.setOrderStatus(CURRENT_ORDER._id,'reported');
+    alert('Result saved & reported');
+    await loadWorklist();
+  }
+
+  function collectResults(status){
+    const vals = [...document.querySelectorAll('.res-value')].map(inp=>{
+      const code = inp.dataset.code;
+      const value = inp.value.trim();
+      const flag = (document.querySelector(`.res-flag[data-code="${code}"]`)||{}).value || '';
+      const unit = inp.parentElement.nextElementSibling.querySelector('input').value || '';
+      return { code, value: value===''? null: (isNaN(value)? value : +value), unit, flag };
+    });
+    return {
+      orderId: CURRENT_ORDER._id,
+      status,
+      results: vals,
+      verifiedBy: (APP_CONFIG?.doctor?.name || 'Lab'),
+      date: todayISO()
+    };
+  }
+
+  // boot
+  (async function init(){
+    try{
+      await loadMasters();
+      await loadWorklist();
+    }catch(e){ console.error(e); }
+  })();
+</script>
+</body>
+</html>

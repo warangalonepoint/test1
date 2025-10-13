@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>One-Click Setup · Clinic PWA</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles/styles.css" onerror="this.remove()"/>
+
+<!-- libs (safe even if db.js injects Pouch) -->
+<script defer src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
+
+<!-- your config + db layer -->
+<script defer src="./config/config.js"></script>
+<script defer src="./scripts/db.js"></script>
+
+<style>
+  :root{--bg:#0f1220;--card:#16192b;--ink:#e6e8f2;--muted:#9aa3b2;--brand:#17B26A;--warn:#d97706;--err:#ef4444;--ok:#22c55e;--r:16px}
+  *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0d1020,#0a0d1a);color:var(--ink);font:14px/1.5 system-ui}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px}
+  header{display:flex;gap:12px;align-items:center;margin:8px 0 16px}
+  header img{width:36px;height:36px;border-radius:10px}
+  h1{font-size:20px;margin:0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .muted{color:var(--muted)}
+  .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#232742}
+  .pill.ok{background:#163d2b;color:#9befc3} .pill.bad{background:#3a1a1a;color:#ffb4b4}
+  .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;background:#232742;color:#fff}
+  .btn.brand{background:var(--brand);color:#04140b;font-weight:700}
+  .btn.warn{background:var(--warn)} .btn.err{background:var(--err)}
+  input,select{background:#0b0e1a;border:1px solid #232742;border-radius:10px;padding:10px 12px;color:#e6e8f2}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px dashed #2a2e45;vertical-align:top}
+  th{text-align:left;color:#c8d0e0}
+  code,pre{background:#0b0e1a;color:#cfe3ff;border-radius:10px;padding:10px;overflow:auto}
+  .hr{height:1px;background:linear-gradient(90deg,transparent,#2a2e45,transparent);margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="./assets/icon-192.png" onerror="this.src='./assets/logo.png';this.onerror=null">
+    <div>
+      <h1>One-Click Setup</h1>
+      <div class="muted">Seeds demo data, tests full read/write/edit/delete flow via your <code>DB</code> API.</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h3 style="margin:0 0 8px">Environment</h3>
+      <div id="env" style="display:grid;grid-template-columns:170px 1fr;gap:8px"></div>
+      <div class="hr"></div>
+      <div class="row">
+        <button class="btn brand" id="runAllBtn">▶ One-Click Test Flow</button>
+        <button class="btn" id="seedBtn">Seed Demo Data</button>
+        <button class="btn" id="readBtn">List Today (Bookings/OPD)</button>
+        <button class="btn warn" id="wipeBtn">Wipe Seed Data</button>
+        <button class="btn" id="exportBtn">Export Snapshot</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px">Quick Add / Edit</h3>
+      <div class="row">
+        <input id="pName" placeholder="Patient Name" value="Diya Demo"/>
+        <input id="pPhone" placeholder="Contact" value="9000000001"/>
+        <select id="pGender">
+          <option>Female</option><option>Male</option><option>Other</option>
+        </select>
+        <button class="btn" id="savePatientBtn">Save/Update Patient</button>
+      </div>
+      <div class="hr"></div>
+      <div class="row">
+        <label class="muted">Status for last booking of this patient:</label>
+        <select id="bStatus"><option>queued</option><option>called</option><option>in-progress</option><option>done</option><option>cancelled</option></select>
+        <button class="btn" id="updateStatusBtn">Update Status</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin:0 0 8px">Today’s Bookings</h3>
+    <div id="bookings"></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin:0 0 8px">Today’s OPD</h3>
+    <div id="opd"></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin:0 0 8px">Logs</h3>
+    <pre id="logbox" style="max-height:280px"></pre>
+  </div>
+</div>
+
+<script>
+/* ========= Helpers ========= */
+const logbox = ()=>document.getElementById('logbox');
+function log(...a){const s=a.map(x=>typeof x==='string'?x:JSON.stringify(x,null,2)).join(' ');
+  const n=logbox(); n.textContent+=s+'\n'; n.scrollTop=n.scrollHeight; }
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+
+/* Render KV rows */
+function kv(container, key, val, pill){
+  const k=document.createElement('div'); k.textContent=key;
+  const v=document.createElement('div'); v.innerHTML = pill ? `<span class="pill ${pill}">${val}</span>` : `<span>${val}</span>`;
+  container.append(k,v);
+}
+
+/* ========= Wiring ========= */
+window.addEventListener('load', async () => {
+  // Wait for config + DB
+  for(let i=0;i<40;i++){
+    if(window.DB && window.APP_CONFIG){ break; }
+    await sleep(100);
+  }
+
+  const env = document.getElementById('env');
+  env.innerHTML='';
+  const C = window.APP_CONFIG || {};
+  const H = (await window.DB.health().catch(()=>({backend:'?', prefix:'?', pouch:false, couch:''}))) || {};
+  kv(env,'Clinic', C.clinicName || '-');
+  kv(env,'Backend', H.backend || '?', H.backend?.startsWith('pouch')?'ok':'');
+  kv(env,'Prefix', H.prefix || C.dbPrefix || 'clinic');
+  kv(env,'Couch URL', H.couch || '(none)');
+  kv(env,'PouchDB', window.PouchDB?'present':'missing', window.PouchDB?'ok':'bad');
+  kv(env,'Dexie', window.Dexie?(Dexie.semVer||'present'):'missing', window.Dexie?'ok':'bad');
+
+  /* ====== Buttons ====== */
+  document.getElementById('runAllBtn').onclick = runAll;
+  document.getElementById('seedBtn').onclick = seedDemo;
+  document.getElementById('readBtn').onclick = refreshLists;
+  document.getElementById('wipeBtn').onclick = wipeSeed;
+  document.getElementById('exportBtn').onclick = exportSnapshot;
+  document.getElementById('savePatientBtn').onclick = saveOrUpdatePatient;
+  document.getElementById('updateStatusBtn').onclick = updateLastBookingStatus;
+
+  // first load
+  await refreshLists();
+});
+
+/* ========= CRUD via DB API ========= */
+
+// Seed a couple of demo patients + bookings + one OPD
+async function seedDemo(){
+  log('--- Seeding demo data ---');
+  const name1 = document.getElementById('pName').value || 'Diya Demo';
+  const phone1 = document.getElementById('pPhone').value || '9000000001';
+  const gender1 = document.getElementById('pGender').value || 'Female';
+
+  // Patient 1
+  let pid1 = await DB.findPatientByNamePhone(name1, phone1);
+  if(!pid1){
+    pid1 = await DB.addOrUpdatePatient({
+      pid: null,
+      patientName: name1,
+      contact: phone1,
+      gender: gender1,
+      dob: '2021-01-01',
+      seed: true
+    });
+    log('Created patient', {pid1});
+  } else {
+    log('Patient exists', {pid1});
+  }
+
+  // Patient 2
+  const name2 = 'Aarav Demo', phone2 = '9000000002';
+  let pid2 = await DB.findPatientByNamePhone(name2, phone2);
+  if(!pid2){
+    pid2 = await DB.addOrUpdatePatient({
+      pid: null,
+      patientName: name2,
+      contact: phone2,
+      gender: 'Male',
+      dob: '2018-03-10',
+      seed: true
+    });
+    log('Created patient', {pid2});
+  }
+
+  // Bookings for today
+  const now = Date.now();
+  const t1 = await DB.nextToken('Online');
+  await DB.addBooking({
+    _id: String(now-5000), // Pouch path uses _id, Dexie/LS ignores
+    ts: now-5000,
+    date: todayISO(),
+    channel: 'Online',
+    pid: pid1,
+    patientName: name1,
+    contact: phone1,
+    token: t1,
+    status: 'queued',
+    seed: true
+  });
+
+  const t2 = await DB.nextToken('Walk');
+  await DB.addBooking({
+    _id: String(now-1000),
+    ts: now-1000,
+    date: todayISO(),
+    channel: 'Walk',
+    pid: pid2,
+    patientName: name2,
+    contact: phone2,
+    token: t2,
+    status: 'queued',
+    seed: true
+  });
+
+  // One OPD record
+  await DB.addOPD({
+    _id: 'opd-'+now,
+    ts: now-800,
+    date: todayISO(),
+    pid: pid1,
+    patientName: name1,
+    reason: 'Fever',
+    seed: true
+  });
+
+  log('Seed complete.');
+  await refreshLists();
+}
+
+// Read lists
+async function refreshLists(){
+  const bookingsDiv = document.getElementById('bookings');
+  const opdDiv = document.getElementById('opd');
+  bookingsDiv.innerHTML = 'Loading…';
+  opdDiv.innerHTML = 'Loading…';
+
+  const list = await DB.listBookingsToday();
+  const colsB = deriveColumns(list, ['status','id','ts','date','channel','pid','patientName','token','contact']);
+  bookingsDiv.innerHTML = renderTable(list, colsB);
+
+  const opd = await DB.listOPDByDate(todayISO());
+  const colsO = deriveColumns(opd, ['id','ts','date','pid','patientName','reason']);
+  opdDiv.innerHTML = renderTable(opd, colsO);
+
+  const count = await DB.countOPDByDate(todayISO());
+  log('Today OPD count:', count);
+}
+
+// Edit patient (upsert)
+async function saveOrUpdatePatient(){
+  const name = document.getElementById('pName').value.trim();
+  const phone = document.getElementById('pPhone').value.trim();
+  const gender = document.getElementById('pGender').value;
+  if(!name || !phone){ alert('Name & Contact required'); return; }
+
+  let pid = await DB.findPatientByNamePhone(name, phone);
+  if(!pid){
+    pid = await DB.addOrUpdatePatient({ patientName:name, contact:phone, gender, seed:true });
+    log('New patient PID', pid);
+  }else{
+    await DB.addOrUpdatePatient({ pid, patientName:name, contact:phone, gender, updatedAt: Date.now(), seed:true });
+    log('Updated patient PID', pid);
+  }
+
+  // Also create a booking for this patient (so we can test status)
+  const token = await DB.nextToken('Online');
+  await DB.addBooking({
+    ts: Date.now(),
+    date: todayISO(),
+    channel: 'Online',
+    pid, patientName:name, contact:phone,
+    token, status:'queued', seed:true
+  });
+  await refreshLists();
+}
+
+// Edit booking status (latest for this patient today)
+async function updateLastBookingStatus(){
+  const name = document.getElementById('pName').value.trim();
+  const phone = document.getElementById('pPhone').value.trim();
+  const status = document.getElementById('bStatus').value;
+  const pid = await DB.findPatientByNamePhone(name, phone);
+  if(!pid){ alert('Patient not found'); return; }
+  const last = await DB.getLatestBookingTodayByPID(pid);
+  if(!last){ alert('No booking today for this patient'); return; }
+  const ok = await DB.setBookingStatus({ pid, token:last.token, status });
+  log('Status update', {ok, pid, token:last.token, status});
+  await refreshLists();
+}
+
+/* ========= Delete (wipe only seeded items) ========= */
+async function wipeSeed(){
+  if(!confirm('Wipe ONLY seed/test/demo items created by this page?')) return;
+
+  // Pouch path
+  const C = window.APP_CONFIG || {};
+  const pre = (C.dbPrefix || 'clinic');
+  const tryPouch = !!window.PouchDB;
+  let deleted = 0;
+
+  if(tryPouch){
+    const pouchDbs = [`${pre}-patients`, `${pre}-bookings`, `${pre}-opd`];
+    for(const name of pouchDbs){
+      try{
+        const db = new PouchDB(name);
+        const res = await db.allDocs({include_docs:true});
+        const toDel = res.rows
+          .map(r=>r.doc)
+          .filter(doc => doc && (doc.seed===true || /demo|seed|sample|test/i.test(JSON.stringify(doc))))
+          .map(doc => ({...doc, _deleted:true}));
+        if(toDel.length){ await db.bulkDocs(toDel); deleted += toDel.length; log('Pouch wiped', name, toDel.length); }
+      }catch(e){ /* ignore if DB missing */ }
+    }
+  }
+
+  // Dexie path
+  if(window.Dexie){
+    try{
+      const db = new Dexie('clinicdb'); try{ await db.open(); }catch{}
+      for(const tname of ['patients','bookings','opd']){
+        const t = db.table(tname); if(!t || !t.schema) continue;
+        const all = await t.toArray();
+        const pk = (t.schema.primKey && (t.schema.primKey.keyPath||'id')) || 'id';
+        const keys = all.filter(r => r && (r.seed===true || /demo|seed|sample|test/i.test(JSON.stringify(r)))).map(r => r[pk]);
+        if(keys.length){ await t.bulkDelete(keys); deleted += keys.length; log('Dexie wiped', tname, keys.length); }
+      }
+      await db.close?.();
+    }catch(e){ /* ignore */ }
+  }
+
+  // LS path (mirrors your db.js keys)
+  try{
+    const lsKeys = ['clinic_ls_patients','clinic_ls_bookings','clinic_ls_opd'];
+    for(const k of lsKeys){
+      const arr = JSON.parse(localStorage.getItem(k) || '[]');
+      const keep = arr.filter(r => !(r && (r.seed===true || /demo|seed|sample|test/i.test(JSON.stringify(r)))));
+      if(keep.length !== arr.length){
+        localStorage.setItem(k, JSON.stringify(keep));
+        deleted += (arr.length - keep.length);
+        log('LS wiped', k, (arr.length - keep.length));
+      }
+    }
+  }catch(e){}
+
+  alert(`Wipe done. Removed ~${deleted} seeded rows/docs.`);
+  await refreshLists();
+}
+
+/* ========= UI rendering ========= */
+function deriveColumns(rows, prefer=[]){
+  if(!rows || !rows.length) return [];
+  const set=new Set();
+  rows.forEach(r=>Object.keys(r||{}).forEach(k=>set.add(k)));
+  const priority=[...prefer,'Timestamp','createdAt','date','time','patientName','channel','status','token','pid','id','_id'];
+  const cols=Array.from(set);
+  cols.sort((a,b)=>{
+    const ia=priority.indexOf(a), ib=priority.indexOf(b);
+    if(ia!==-1 && ib!==-1) return ia-ib;
+    if(ia!==-1) return -1; if(ib!==-1) return 1;
+    return a.localeCompare(b);
+  });
+  return cols.slice(0,10);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+function renderCell(v){ if(v==null) return ''; if(typeof v==='object') return JSON.stringify(v); return String(v); }
+function renderTable(rows, cols){
+  if(!rows || !rows.length) return '<div class="muted">No records.</div>';
+  return [
+    '<div style="overflow:auto">',
+    '<table><thead><tr>',
+    cols.map(c=>`<th>${esc(c)}</th>`).join(''),
+    '</tr></thead><tbody>',
+    rows.map(r=>`<tr>${cols.map(c=>`<td><code>${esc(renderCell(r[c]))}</code></td>`).join('')}</tr>`).join(''),
+    '</tbody></table></div>'
+  ].join('');
+}
+
+/* ========= One-Click end-to-end ========= */
+async function runAll(){
+  log('▶ One-Click flow started…');
+  await seedDemo();
+  await sleep(300);
+
+  // Update status of the first patient’s latest booking
+  const name = document.getElementById('pName').value || 'Diya Demo';
+  const phone = document.getElementById('pPhone').value || '9000000001';
+  const pid = await DB.findPatientByNamePhone(name, phone);
+  if(pid){
+    const latest = await DB.getLatestBookingTodayByPID(pid);
+    if(latest){ await DB.setBookingStatus({pid, token:latest.token, status:'called'}); log('Auto status → called', {pid, token:latest.token}); }
+  }
+
+  await refreshLists();
+  log('✅ Flow done.');
+}
+
+/* ========= Export ========= */
+async function exportSnapshot(){
+  const out = {
+    ts: new Date().toISOString(),
+    env: await DB.health().catch(()=>({})),
+    bookingsToday: await DB.listBookingsToday().catch(()=>[]),
+    opdToday: await DB.listOPDByDate(todayISO()).catch(()=>[])
+  };
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`snapshot_${Date.now()}.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 10000);
+}
+</script>
+</body>
+</html>

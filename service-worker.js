@@ -1,54 +1,53 @@
-// service-worker.js
-const CACHE = "clinic-pwa-v1";
+/* PWA Service Worker — static + runtime cache */
+const VERSION = 'v7';
+const CACHE = 'clinic-pwa-' + VERSION;
+
 const ASSETS = [
-  "/", "/index.html",
-  "/styles.css",
-  "/manifest.json",
-  "/assets/logo.png", "/assets/banner.png",
-  // add key HTML entry points you want available offline:
-  "/dashboard.html", "/frontoffice.html", "/supervisor-hub.html",
-  "/bookings.html", "/booking-status.html", "/opd-records.html",
-  "/lab.html", "/pharmacy.html", "/sales.html", "/purchase.html"
+  '/', '/index.html',
+  '/manifest.webmanifest',
+  '/styles.css',
+  '/config/config.js',
+  '/scripts/db.js',
+  '/scripts/app-wiring.js',
+  '/assets/logo.png',
+  '/assets/banner.png',
+  '/assets/icon-192.png',
+  '/assets/icon-512.png',
+  '/assets/maskable-512.png'
 ];
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+self.addEventListener('install', e=>{
+  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
+  self.skipWaiting();
 });
 
-self.addEventListener("activate", (e) => {
+self.addEventListener('activate', e=>{
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+    caches.keys().then(keys=>Promise.all(keys.map(k=>k!==CACHE && caches.delete(k))))
   );
+  self.clients.claim();
 });
 
-// Cache-first for navigations & static; network-first for JSON API-ish calls
-self.addEventListener("fetch", (e) => {
+/* Network-first for HTML; cache-first for others */
+self.addEventListener('fetch', e=>{
   const req = e.request;
-  const url = new URL(req.url);
-
-  // Network-first for dynamic JSON
-  const isJSON = req.headers.get("accept")?.includes("application/json")
-              || url.pathname.endsWith(".json");
-
-  if (isJSON) {
+  const isHTML = req.destination === 'document' || req.headers.get('accept')?.includes('text/html');
+  if (isHTML) {
     e.respondWith(
-      fetch(req).then(r => {
-        const clone = r.clone();
-        caches.open(CACHE).then(c => c.put(req, clone));
+      fetch(req).then(r=>{
+        const copy=r.clone();
+        caches.open(CACHE).then(c=>c.put(req, copy));
         return r;
-      }).catch(() => caches.match(req))
+      }).catch(()=>caches.match(req))
     );
-    return;
+  } else {
+    e.respondWith(
+      caches.match(req).then(hit => hit || fetch(req).then(r=>{
+        if (r.ok && (req.method==='GET')) {
+          const copy=r.clone(); caches.open(CACHE).then(c=>c.put(req, copy));
+        }
+        return r;
+      }))
+    );
   }
-
-  // Cache-first for everything else
-  e.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(r => {
-      const copy = r.clone();
-      caches.open(CACHE).then(c => c.put(req, copy));
-      return r;
-    }))
-  );
 });

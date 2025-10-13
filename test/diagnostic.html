@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CouchDB Diagnostic · Onestop AI</title>
+<style>
+body{font-family:system-ui,Segoe UI,sans-serif;background:#f7f8fb;color:#0f172a;margin:0;padding:20px}
+h1{font-size:20px;margin-bottom:10px}
+button{background:#17B26A;color:#fff;border:0;padding:10px 18px;border-radius:8px;cursor:pointer}
+pre{background:#fff;border-radius:10px;padding:10px;box-shadow:0 2px 6px rgba(0,0,0,.05);white-space:pre-wrap}
+#status span{display:inline-block;margin:6px 0;padding:4px 10px;border-radius:8px}
+.ok{background:#d1fae5;color:#065f46}
+.err{background:#fee2e2;color:#991b1b}
+.mid{background:#fef3c7;color:#92400e}
+input[type=text]{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin:8px 0}
+.small{color:#64748b;font-size:12px}
+</style>
+</head>
+<body>
+<h1>🩺 CouchDB Diagnostic</h1>
+<p>Checks CouchDB connection, CORS, and a read/write probe. Uses your <code>config/config.js</code>.</p>
+
+<div class="small">Tip: You may keep credentials inside <code>APP_CONFIG.couchUrl</code> (user:pass@host) or set <code>APP_CONFIG.couchAuth</code> = { username, password } and use a bare host URL.</div>
+
+<button id="run">Run Diagnostic</button>
+<div id="status" style="margin-top:10px"></div>
+<pre id="log">Idle…</pre>
+
+<script src="../config/config.js?v=1"></script>
+<script>
+function parseCouchConf(){
+  // Accept either:
+  // 1) APP_CONFIG.couchUrl with embedded creds
+  // 2) APP_CONFIG.couchUrl without creds + APP_CONFIG.couchAuth {username,password}
+  const raw = (window.APP_CONFIG?.couchUrl || '').trim();
+  if(!raw) return {error:'No APP_CONFIG.couchUrl found'};
+  let u;
+  try { u = new URL(raw); } catch { return {error:'Invalid couchUrl: '+raw}; }
+  const conf = {
+    base: u.origin,                 // http(s)://host:port
+    username: decodeURIComponent(u.username||''),
+    password: decodeURIComponent(u.password||'')
+  };
+  if(!conf.username && window.APP_CONFIG?.couchAuth?.username){
+    conf.username = window.APP_CONFIG.couchAuth.username;
+    conf.password = window.APP_CONFIG.couchAuth.password || '';
+  }
+  conf.authHeader = conf.username ? ('Basic '+btoa(conf.username+':'+conf.password)) : null;
+  return conf;
+}
+
+async function fetchAuth(conf, path, opts={}){
+  const url = conf.base + path;
+  const headers = Object.assign(
+    {'Accept':'application/json'},
+    opts.headers || {},
+    conf.authHeader ? {'Authorization':conf.authHeader} : {}
+  );
+  const finalOpts = Object.assign({headers}, opts);
+  return fetch(url, finalOpts);
+}
+
+async function runDiag(){
+  const log = document.getElementById('log');
+  const status = document.getElementById('status');
+  log.textContent = '';
+  status.innerHTML = '';
+
+  const conf = parseCouchConf();
+  if(conf.error){ log.textContent = '❌ ' + conf.error; return; }
+
+  const line = (t)=>{ log.textContent += t + '\n'; };
+  const chip = (cls, msg)=>{ const s=document.createElement('span'); s.className=cls; s.textContent=msg; status.appendChild(s); };
+
+  line('🔗 Base: ' + conf.base + (conf.username? ' (auth user: '+conf.username+')' : ''));
+  // 1) _up
+  try{
+    const r = await fetchAuth(conf,'/_up');
+    const t = await r.text();
+    if(r.ok && /Welcome/i.test(t)){ chip('ok','Server UP'); }
+    else { chip('mid','_up responded'); line(t); }
+  }catch(e){ chip('err','Server unreachable'); line(String(e)); return; }
+
+  // 2) _all_dbs  (needs auth if admin-party disabled)
+  try{
+    const r = await fetchAuth(conf,'/_all_dbs');
+    if(!r.ok){ chip('err','List DBs failed ('+r.status+')'); line(await r.text()); }
+    else{
+      const dbs = await r.json();
+      chip('ok', dbs.length+' DBs listed');
+      line(JSON.stringify(dbs,null,2));
+    }
+  }catch(e){ chip('err','List DBs error'); line(String(e)); }
+
+  // 3) Write/Read self-test to <prefix>-patients
+  const prefix = window.APP_CONFIG?.dbPrefix || 'clinic';
+  const db = prefix + '-patients';
+  const id = 'selftest-'+Date.now();
+  const doc = {_id:id, kind:'ping', ts:new Date().toISOString()};
+
+  line('🧪 PUT '+db+'/'+id);
+  try{
+    const r = await fetchAuth(conf,'/'+db+'/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(doc)});
+    const t = await r.text();
+    if(r.ok){ chip('ok','Write OK'); } else { chip('err','Write failed ('+r.status+')'); }
+    line(t);
+  }catch(e){ chip('err','Write error'); line(String(e)); }
+
+  line('🔍 GET '+db+'/'+id);
+  try{
+    const r = await fetchAuth(conf,'/'+db+'/'+id);
+    const t = await r.text();
+    if(r.ok){ chip('ok','Read OK'); } else { chip('err','Read failed ('+r.status+')'); }
+    line(t);
+  }catch(e){ chip('err','Read error'); line(String(e)); }
+}
+
+document.getElementById('run').onclick=runDiag;
+</script>
+</body>
+</html>

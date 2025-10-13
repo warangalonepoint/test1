@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="manifest" href="/manifest.webmanifest"/>
+
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Lab Records · Clinic PWA</title>
@@ -22,6 +24,9 @@ body{margin:0;font:14px/1.45 system-ui;background:#FFF7EF}
 .table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
 .badge{display:inline-block;border:1px solid #e2e8f0;border-radius:999px;padding:2px 8px;font-size:12px}
 </style>
+<script src="/config/config.js"></script>
+<script src="/scripts/app-wiring.js"></script>
+<script src="/scripts/db.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -41,7 +46,7 @@ body{margin:0;font:14px/1.45 system-ui;background:#FFF7EF}
       <span class="badge" id="count">0</span>
     </div>
     <table class="table" id="tbl">
-      <thead><tr><th>Date/Time</th><th>PID</th><th>Name</th><th>Tests</th><th>Total</th></tr></thead>
+      <thead><tr><th>Date/Time</th><th>PID</th><th>Name</th><th>Tests</th><th>Total</th><th>Print</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -53,13 +58,35 @@ const STORE='lab_records_json'; // append to this from your lab workflow when re
 const $=s=>document.querySelector(s);
 let ALL=[];
 function load(){ try{const a=JSON.parse(localStorage.getItem(STORE)||'[]'); return Array.isArray(a)?a:[]}catch{return[]} }
+
+/* print helper (uses print/print-lab.html if available; else falls back) */
+async function printRec(rec){
+  try{ localStorage.setItem('last_lab_report', JSON.stringify(rec)); }catch{}
+  const qs='?data='+encodeURIComponent(JSON.stringify(rec))+'&print=1';
+  const target='./print/print-lab.html';
+  try{
+    const r=await fetch(target,{method:'HEAD',cache:'no-store'});
+    if(r.ok){ window.open(target+qs,'_blank'); return; }
+  }catch(_){}
+  window.print();
+}
+
 function render(list=ALL){
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
   list.forEach(r=>{
     const dt=new Date(r.ts||Date.now()).toLocaleString();
     const tests=(r.items||[]).map(x=>x.test||x.name).join(', ');
     const total=r.total || (r.items||[]).reduce((s,x)=>s+(+x.price||0),0);
-    tb.insertAdjacentHTML('beforeend', `<tr><td>${dt}</td><td>${r.pid||''}</td><td>${r.name||''}</td><td>${tests}</td><td>₹ ${(total||0).toFixed(0)}</td></tr>`);
+    const payload=encodeURIComponent(JSON.stringify(r));
+    tb.insertAdjacentHTML('beforeend',
+      `<tr>
+        <td>${dt}</td>
+        <td>${r.pid||''}</td>
+        <td>${r.name||''}</td>
+        <td>${tests}</td>
+        <td>₹ ${(total||0).toFixed(0)}</td>
+        <td><button class="btn" onclick='printRec(JSON.parse(decodeURIComponent("${payload}")))'>Print</button></td>
+      </tr>`);
   });
   $("#count").textContent=list.length;
 }

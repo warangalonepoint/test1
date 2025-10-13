@@ -1,0 +1,119 @@
+/* /scripts/shortcuts.js
+   Desktop helpers + keyboard shortcuts. Pure glue: calls your existing functions if present.
+*/
+(function(){
+  const $ = s => document.querySelector(s);
+
+  // ---- Make tables desktop-friendly without touching your HTML ----
+  function wrapTables(){
+    document.querySelectorAll('table.table').forEach(t=>{
+      if(t.closest('.table-wrap')) return;
+      const w=document.createElement('div');
+      w.className='table-wrap';
+      t.parentNode.insertBefore(w,t);
+      w.appendChild(t);
+    });
+  }
+
+  // ---- Page detection ----
+  const isSales      = !!document.getElementById('saleTable');
+  const isPurch      = !!document.getElementById('ptable') && !!document.getElementById('vendor');
+  const isInventory  = !!document.getElementById('tbl') && !!document.getElementById('search');
+  const isReturns    = !!document.getElementById('returnsTable'); // if/when you add returns
+
+  // ---- Tooltips so staff see the shortcuts on hover (no UI change) ----
+  function annotate(){
+    const map = [
+      ['#btnSave', 'Ctrl+S — Save'],
+      ['#btnPrint', 'Ctrl+P — Print'],
+      ['#scanSales', 'Alt+C — Scan'],
+    ];
+    map.forEach(([sel, tip])=>{ const el=$(sel); if(el && !el.title) el.title=tip; });
+  }
+
+  // ---- Key bindings (desktop) ----
+  function onKey(e){
+    const k = e.key.toLowerCase();
+    const ctrl = e.ctrlKey || e.metaKey; // allow Cmd on Mac
+    const alt  = e.altKey;
+    const shift= e.shiftKey;
+
+    // Global
+    if(ctrl && k==='p'){ e.preventDefault(); if(typeof window.printBill==='function') window.printBill(); return; }
+
+    // SALES
+    if(isSales){
+      if(alt && k==='s'){ e.preventDefault(); $('#pname')?.focus(); $('#pname')?.select(); }
+      if(alt && k==='q'){ e.preventDefault(); $('#pqty')?.focus(); $('#pqty')?.select(); }
+      if(alt && k==='d'){ e.preventDefault(); $('#disc')?.focus(); $('#disc')?.select(); }
+      if(alt && k==='c'){ e.preventDefault(); document.getElementById('scanSales')?.click(); }
+      if(ctrl && k==='enter'){ e.preventDefault(); if(typeof window.addItem==='function') addItem(); }
+      if(ctrl && k==='s'){ e.preventDefault(); if(typeof window.saveInvoice==='function') saveInvoice(); }
+      if(ctrl && k==='backspace'){ e.preventDefault(); if(typeof window.clearAll==='function') clearAll(); }
+      return;
+    }
+
+    // PURCHASES
+    if(isPurch){
+      if(alt && k==='s'){ e.preventDefault(); $('#pname')?.focus(); $('#pname')?.select(); }
+      if(alt && k==='r'){ e.preventDefault(); $('#roundOff')?.focus(); $('#roundOff')?.select(); }
+      if(ctrl && k==='enter'){ e.preventDefault(); if(typeof window.addRow==='function') addRow(); }
+      // Ctrl+S saves via print flow or your persistence; here just print
+      if(ctrl && k==='s'){ e.preventDefault(); if(typeof window.printBill==='function') printBill(); }
+      return;
+    }
+
+    // INVENTORY
+    if(isInventory){
+      if(alt && k==='f'){ e.preventDefault(); $('#search')?.focus(); $('#search')?.select(); }
+      if(ctrl && k==='enter'){ e.preventDefault(); if(typeof window.saveBatch==='function') saveBatch(); }
+      if(ctrl && k==='l'){ e.preventDefault(); if(typeof window.printFilteredLabels==='function') printFilteredLabels(); }
+      if(alt && k==='e'){ e.preventDefault(); if(typeof window.exportCSV==='function') exportCSV(); }
+      if(alt && k==='i'){ e.preventDefault(); document.getElementById('csv')?.click(); }
+      return;
+    }
+
+    // RETURNS (when you wire the page)
+    if(isReturns){
+      if(alt && k==='s'){ e.preventDefault(); document.getElementById('rname')?.focus(); }
+      if(ctrl && k==='enter'){ e.preventDefault(); document.getElementById('btnAddReturn')?.click(); }
+      if(ctrl && k==='s'){ e.preventDefault(); document.getElementById('btnSaveReturn')?.click(); }
+      if(ctrl && k==='p'){ e.preventDefault(); document.getElementById('btnPrintReturn')?.click(); }
+      return;
+    }
+  }
+
+  // Enter-to-add inside key input clusters (no logic change)
+  function wireEnterToAdd(){
+    // Sales: hitting Enter in product/qty adds item
+    ['#pname','#pqty'].forEach(sel=>{
+      const el=$(sel); if(el) el.addEventListener('keydown',ev=>{
+        if(ev.key==='Enter'){ ev.preventDefault(); if(typeof window.addItem==='function') addItem(); }
+      });
+    });
+    // Purchases: in any add-row field, Ctrl+Enter as global already; also plain Enter in qty/rate
+    ;['#pname','#prate','#pqty','#pdisc','#pfree'].forEach(sel=>{
+      const el=$(sel); if(el) el.addEventListener('keydown',ev=>{
+        if(ev.key==='Enter'){ ev.preventDefault(); if(typeof window.addRow==='function') addRow(); }
+      });
+    });
+    // Inventory: Enter in qty/rate submits save
+    ;['#name','#batch','#exp','#qty','#rate'].forEach(sel=>{
+      const el=$(sel); if(el) el.addEventListener('keydown',ev=>{
+        if(ev.key==='Enter'){ ev.preventDefault(); if(typeof window.saveBatch==='function') saveBatch(); }
+      });
+    });
+  }
+
+  document.addEventListener('keydown', onKey);
+  document.addEventListener('DOMContentLoaded', ()=>{
+    wrapTables();
+    annotate();
+    wireEnterToAdd();
+  });
+
+  // Extra: close any suggestion overlay with ESC (works with the sales grid you added)
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){ document.getElementById('pgrid')?.classList?.add?.('hidden'); }
+  });
+})();

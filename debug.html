@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Diagnostics · Admin (Dexie + Pouch, Read-only)</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="stylesheet" href="./styles/styles.css" onerror="this.remove()"/>
+<script defer src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
+<script defer src="./scripts/db.js" onerror="/* optional */"></script>
+<style>
+  :root{--bg:#0f1220;--card:#16192b;--ink:#e6e8f2;--muted:#9aa3b2;--brand:#17B26A;--ok:#22c55e;--err:#ef4444;--r:16px}
+  *{box-sizing:border-box} body{margin:0;background:#0d1020;color:var(--ink);font:14px/1.5 system-ui}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  header{display:flex;gap:12px;align-items:center;margin:8px 0 16px}
+  header img{width:36px;height:36px;border-radius:10px}
+  .card{background:#16192b;border-radius:var(--r);padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .muted{color:var(--muted)} .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#232742}
+  .pill.ok{background:#163d2b;color:#9befc3} .pill.bad{background:#3a1a1a;color:#ffb4b4}
+  .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;background:#232742;color:#fff}
+  table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px dashed #2a2e45;vertical-align:top}
+  th{text-align:left;color:#c8d0e0} code,pre{background:#0b0e1a;color:#cfe3ff;border-radius:10px;padding:10px;overflow:auto}
+  .hr{height:1px;background:linear-gradient(90deg,transparent,#2a2e45,transparent);margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="./assets/icon-192.png" onerror="this.src='./assets/logo.png';this.onerror=null">
+    <div>
+      <h1>Diagnostics (Read-only)</h1>
+      <div class="muted">Works with Dexie tables & PouchDB docs. PIN 2066.</div>
+    </div>
+  </header>
+
+  <!-- Guard -->
+  <div id="guard" class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><span class="muted">Access:</span> <span id="guard-state" class="pill bad">checking…</span></div>
+      <div class="row">
+        <button class="btn" onclick="pinUnlock()">PIN Unlock</button>
+        <button class="btn" onclick="location.reload()">Re-check</button>
+      </div>
+    </div>
+    <div class="hr"></div>
+    <div class="muted">Or open once with <code>?admin=1</code>. Stored key: <code>debug.pin</code>.</div>
+  </div>
+
+  <!-- Main -->
+  <section id="main" class="card" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <h3 style="margin:0 0 8px">Health</h3>
+        <div id="kvs" style="display:grid;grid-template-columns:160px 1fr;gap:8px"></div>
+        <div class="hr"></div>
+        <div class="row">
+          <button class="btn" onclick="runDiag()">Re-scan</button>
+          <button class="btn" onclick="exportDiagnostics()">Export JSON</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">Sources</h3>
+        <div class="row">
+          <label class="muted">Pick:</label>
+          <select id="sourceSelect" class="btn" onchange="loadRecent()"></select>
+          <button class="btn" onclick="loadRecent()">Reload</button>
+        </div>
+        <div class="hr"></div>
+        <div id="sourcesList"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Last 10 <span id="src-pill" class="pill">—</span></h3>
+        <small class="muted">Dexie rows / Pouch docs</small>
+      </div>
+      <div class="hr"></div>
+      <div id="recent"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 8px">Logs</h3>
+      <pre id="logbox" style="max-height:260px"></pre>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ===== Guard (PIN 2066) ===== */
+const ADMIN_PIN="2066";
+function isAdmin(){try{
+  const p=new URL(location.href).searchParams;
+  return p.get('admin')==='1'||
+    (localStorage.getItem('debug.pin')===ADMIN_PIN)||
+    (localStorage.getItem('admin.unlocked')||'').toLowerCase()==='true';
+}catch{ return false; }}
+function pinUnlock(){ const pin=prompt('Enter Admin PIN'); if(pin===ADMIN_PIN){localStorage.setItem('debug.pin',ADMIN_PIN);localStorage.setItem('admin.unlocked','true');location.reload();}}
+
+/* ===== Logs ===== */
+const logbox=()=>document.getElementById('logbox');
+function log(...a){const s=a.map(x=>typeof x==='string'?x:JSON.stringify(x,null,2)).join(' '); const n=logbox(); n.textContent+=s+'\n'; n.scrollTop=n.scrollHeight;}
+
+/* ===== UI Boot ===== */
+(function(){
+  const g=document.getElementById('guard'), m=document.getElementById('main'), b=document.getElementById('guard-state');
+  if(isAdmin()){b.textContent='admin'; b.classList.replace('bad','ok'); g.style.display='none'; m.style.display='block'; runDiag();}
+  else {b.textContent='locked (403)';}
+})();
+
+/* ===== Helpers ===== */
+async function listIdbNames(){
+  try{
+    if(indexedDB.databases){
+      const arr=(await indexedDB.databases()).map(d=>d.name).filter(Boolean);
+      for(const x of ['clinicdb','onestop-clinic','charan-clinic','appdb']) if(!arr.includes(x)) arr.push(x);
+      return Array.from(new Set(arr));
+    }
+  }catch(e){ log('indexedDB.databases blocked:', e.message); }
+  try{
+    const arr=await Dexie.getDatabaseNames();
+    for(const x of ['clinicdb','onestop-clinic','charan-clinic','appdb']) if(!arr.includes(x)) arr.push(x);
+    return Array.from(new Set(arr));
+  }catch{ return ['clinicdb']; }
+}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+function renderCell(v){ if(v==null) return ''; if(typeof v==='object') return JSON.stringify(v); return String(v); }
+
+/* ===== Scan & Health ===== */
+let __SOURCES=[];
+async function runDiag(){
+  const kvs=document.getElementById('kvs'); kvs.innerHTML='';
+  const add=(k,v,p)=>{const kd=document.createElement('div'); kd.textContent=k; const vd=document.createElement('div'); vd.innerHTML=p?`<span class="pill ${p}">${v}</span>`:`<span>${v}</span>`; kvs.append(kd,vd);};
+
+  add('Online', navigator.onLine?'online':'offline', navigator.onLine?'ok':'bad');
+  add('Dexie', window.Dexie?(Dexie.semVer||'present'):'missing', window.Dexie?'ok':'bad');
+  add('PouchDB', window.PouchDB?'present':'missing', window.PouchDB?'ok':'bad');
+
+  // Couch ping (if config provides it)
+  try{
+    const C = window.APP_CONFIG||{};
+    if(typeof C.pingCouch==='function'){
+      const r = await C.pingCouch();
+      add('CouchDB', r.ok? `ok (${r.status||200})` : (r.error||'unreachable'), r.ok?'ok':'bad');
+    }
+  }catch(e){ add('CouchDB','error','bad'); log('ping error',e.message); }
+
+  const names=await listIdbNames();
+  const pouch=names.filter(n=>n.startsWith('_pouch_')).map(n=>n.replace(/^_pouch_/,''));
+  const dexie=names.filter(n=>!n.startsWith('_pouch_'));
+  add('Local DBs', names.join(', ')||'(none)');
+
+  __SOURCES=[];
+  const list=document.getElementById('sourcesList'); list.innerHTML='';
+  const sel=document.getElementById('sourceSelect'); sel.innerHTML='';
+
+  // Pouch sources
+  if(window.PouchDB){
+    for(const dbName of pouch){
+      try{
+        const db=new PouchDB(dbName);
+        const info=await db.info();
+        const val=`pouch::${dbName}`;
+        __SOURCES.push({kind:'pouch', value:val, dbName});
+        sel.append(new Option(`pouch · ${dbName} (${info.doc_count})`, val));
+        const row=document.createElement('div'); row.className='row'; row.style.justifyContent='space-between';
+        row.innerHTML=`<div><b>pouch</b> · ${dbName}</div><div class="pill">${info.doc_count}</div>`;
+        list.appendChild(row);
+      }catch(e){ log('pouch info fail', dbName, e.message); }
+    }
+  }
+
+  // Dexie sources (per table)
+  for(const name of dexie){
+    try{
+      const db=new Dexie(name); try{ await db.open(); }catch{}
+      for(const t of db.tables){
+        let count=0; try{ count=await t.count(); }catch{}
+        const val=`dexie::${name}::${t.name}`;
+        __SOURCES.push({kind:'dexie', value:val, dbName:name, table:t.name});
+        sel.append(new Option(`dexie · ${name} · ${t.name} (${count})`, val));
+        const row=document.createElement('div'); row.className='row'; row.style.justifyContent='space-between';
+        row.innerHTML=`<div><b>dexie</b> · ${name} · ${t.name}</div><div class="pill">${count}</div>`;
+        list.appendChild(row);
+      }
+      await db.close?.();
+    }catch(e){ log('dexie open fail', name, e.message); }
+  }
+
+  // preferred default: any bookings-like source
+  const prefer = Array.from(sel.options).find(o=>/bookings/i.test(o.value)) || sel.options[0];
+  if(prefer) sel.value = prefer.value;
+
+  document.getElementById('src-pill').textContent = (sel.value||'—').replace(/^dexie::/,'').replace(/^pouch::/,'');
+  loadRecent();
+}
+
+/* ===== Recent ===== */
+function parseSrc(v){
+  if(!v) return null;
+  if(v.startsWith('dexie::')){ const [, , db, table]=v.split('::'); return {kind:'dexie',db,table}; }
+  if(v.startsWith('pouch::')){ const [, , db]=v.split('::'); return {kind:'pouch',db}; }
+  return null;
+}
+async function loadRecent(){
+  const sel=document.getElementById('sourceSelect'); const out=document.getElementById('recent');
+  out.innerHTML=''; const tag = (sel.value||'—').replace(/^dexie::/,'').replace(/^pouch::/,'');
+  document.getElementById('src-pill').textContent=tag;
+  const src=parseSrc(sel.value); if(!src){ out.innerHTML='<div class="muted">No sources.</div>'; return; }
+
+  try{
+    let rows=[], cols=[];
+    if(src.kind==='dexie'){
+      const db=new Dexie(src.db); try{ await db.open(); }catch{}
+      const t=db.table(src.table);
+      const time=['Timestamp','timestamp','createdAt','created','time','date']; const pk=(t.schema.primKey&&(t.schema.primKey.keyPath||'id'))||'id';
+      let ordered=false; for(const f of time){ if(f===pk || t.schema.indexes.some(ix=>ix.keyPath===f)){ rows=await t.orderBy(f).reverse().limit(10).toArray(); ordered=true; break; } }
+      if(!ordered) rows=await t.toCollection().reverse().limit(10).toArray();
+      await db.close?.();
+      cols = deriveCols(rows,false);
+    }else{
+      const db=new PouchDB(src.db);
+      const res=await db.allDocs({include_docs:true,descending:true,limit:10});
+      rows=res.rows.map(r=>r.doc||({_id:r.id,_rev:r.value?.rev}));
+      cols = deriveCols(rows,true);
+    }
+
+    if(!rows.length){ out.innerHTML='<div class="muted">No records.</div>'; return; }
+    const html=['<div style="overflow:auto"><table><thead><tr>',
+      cols.map(c=>`<th>${esc(c)}</th>`).join(''),
+      '</tr></thead><tbody>',
+      rows.map(r=>`<tr>${cols.map(c=>`<td><code>${esc(renderCell(r[c]))}</code></td>`).join('')}</tr>`).join(''),
+      '</tbody></table></div>'].join('');
+    out.innerHTML=html;
+  }catch(e){ log('recent error', e.message||e); out.innerHTML='<div class="muted">Error. See Logs.</div>'; }
+}
+function deriveCols(rows,isPouch){
+  const set=new Set(); rows.forEach(r=>Object.keys(r||{}).forEach(k=>set.add(k)));
+  const priority=isPouch? ['_id','_rev','Timestamp','createdAt','date','time','patientName','slot','status','token','contact']
+                        : ['Timestamp','createdAt','date','time','Slot Time','Patient Name','Reason','Contact','Token','status','type','id','_id'];
+  const cols=Array.from(set); cols.sort((a,b)=>{const ia=priority.indexOf(a),ib=priority.indexOf(b); if(ia!==-1&&ib!==-1) return ia-ib; if(ia!==-1) return -1; if(ib!==-1) return 1; return a.localeCompare(b);});
+  return cols.slice(0,10);
+}
+
+/* ===== Export ===== */
+async function exportDiagnostics(){
+  const payload={ ts:new Date().toISOString(), ua:navigator.userAgent, online:navigator.onLine };
+  try{
+    payload.config=(window.APP_CONFIG? {clinic:window.APP_CONFIG.clinicName, couch:window.APP_CONFIG.couchUrl, build:window.APP_CONFIG.build}:null);
+    const names=await listIdbNames();
+    payload.idbNames=names;
+    payload.pouch=names.filter(n=>n.startsWith('_pouch_')).map(n=>n.replace(/^_pouch_/,''));
+    payload.dexie=names.filter(n=>!n.startsWith('_pouch_'));
+  }catch(e){ payload.error=e.message; }
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`diagnostics_${Date.now()}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1e4);
+}
+</script>
+</body>
+</html>

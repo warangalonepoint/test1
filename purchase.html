@@ -1,64 +1,75 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Purchase · Pharmacy · Clinic PWA</title>
-<link rel="manifest" href="./manifest.json"/>
-<link rel="stylesheet" href="./styles.css"/>
-<script src="./config.js"></script>
-<style>
-:root{
-  --bg-gradient:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);
-  --mint:#D6E5DD;--lav:#DED8F2;--peach:#FFE8D9;--card:#fff;--ink:#0f172a;
-  --muted:#475569;--primary:#139a5b;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.08)
-}
-:root{--header-tint:#DED8F2;--header-tint-rgba:222,216,242;--banner-tint:#D6E5DD;--banner-tint-rgba:214,229,221}
-*{box-sizing:border-box}
-body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink);}
-a{color:inherit;text-decoration:none}
-.wrap{max-width:1100px;margin:0 auto;padding:0 10px}
-.header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(var(--header-tint-rgba),.7);border:1px solid #0001;border-radius:12px;margin-top:10px;box-shadow:var(--shadow);}
-.header .logo{height:40px}
-.btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
-.btn:hover{background:#f1f5f9}
-.btn.primary{background:var(--primary);color:#fff;border:none}
-.banner{position:relative;overflow:hidden;border-radius:var(--r);margin:10px 0;background:var(--banner-tint)}
-.banner img{width:100%;transform:scale(.65);display:block;border-radius:var(--r);mix-blend-mode:multiply;opacity:.95}
-.banner::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(var(--banner-tint-rgba),.3),rgba(var(--banner-tint-rgba),.3))}
-.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
-.row{display:flex;flex-wrap:wrap;gap:10px}
-.input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
-.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
-.table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
-.table th{background:#f1f5f9}
-.footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0 14px}
-@media print{
-  body{background:#fff;color:#000;margin:0}
-  .wrap,.header,.banner,.footer{display:none}
-  #printArea{display:block;padding:12mm}
-  .a4{width:210mm;min-height:297mm;margin:auto}
-  .bill{font:13px/1.45 system-ui;color:#000}
-  .bill table{width:100%;border-collapse:collapse}
-  .bill th,.bill td{border:1px solid #000;padding:4px}
-  .bill h2{margin:0 0 4px}
-}
-#printArea{display:none}
-</style>
+  <script src="./config/config.js"></script>
+  <script src="./scripts/db.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Purchase · Pharmacy · Clinic PWA</title>
+  <link rel="manifest" href="./manifest.json"/>
+  <link rel="stylesheet" href="./styles.css"/>
+<link rel="stylesheet" href="./desktop.css?v=1.0"/>
+  <style>
+    :root{
+      --bg-gradient:linear-gradient(145deg,#eef3f1,#f0eef9,#fff2eb);
+      --mint:#D6E5DD;--lav:#DED8F2;--peach:#FFE8D9;--card:#fff;--ink:#0f172a;
+      --muted:#475569;--primary:#139a5b;--r:16px;--shadow:0 6px 18px rgba(0,0,0,.08)
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font:14px/1.45 system-ui;background:var(--bg-gradient);color:var(--ink)}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 10px}
+    .header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#EEF2FF;border:1px solid #e5e7eb;border-radius:12px;margin-top:10px;box-shadow:var(--shadow)}
+    .header .logo{height:40px}
+    .btn{background:#fff;border:1px solid #cbd5e1;border-radius:20px;padding:6px 14px;font-weight:600;cursor:pointer}
+    .btn.primary{background:var(--primary);color:#fff;border:none}
+    .card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:12px}
+    .row{display:flex;flex-wrap:wrap;gap:10px}
+    .input{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;width:100%}
+    .table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+    .table th,.table td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left;vertical-align:top}
+    .table th{background:#f1f5f9}
+    .total{text-align:right;font-weight:700}
+    .footer{text-align:center;padding:14px 4px;font-size:13px;color:var(--muted);margin:18px 0 14px}
+    .soft{color:#64748b}
+    .blank-row td{height:24px}
+    .totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .totals-grid .box{border:1px dashed #cbd5e1;border-radius:10px;padding:8px;background:#F8FAFC}
+
+    @media print{
+      body{background:#fff;color:#000;margin:0}
+      .wrap,.header,.card:not(.print-only),.footer{display:none}
+      #printArea{display:block;padding:10mm}
+      .a4{width:210mm;min-height:297mm;margin:0 auto}
+      .bill{font:12px/1.35 system-ui;color:#000}
+      .bill h2{margin:0}
+      .bill .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0}
+      .bill table{width:100%;border-collapse:collapse}
+      .bill th,.bill td{border:1px solid #000;padding:4px}
+      .bill th{background:#f3f3f3}
+      .right{text-align:right}
+      .center{text-align:center}
+    }
+    #printArea{display:none}
+  </style>
+  <script src="/scripts/app-wiring.js?v=1.1"></script>
 </head>
 <body>
 <div class="wrap">
+
   <div class="header">
     <img class="logo" src="./assets/logo.png" alt="logo">
     <div>
       <div style="font-weight:700;font-size:18px">Purchases (Distributor GST)</div>
-      <div style="font-size:13px;color:var(--muted)">Adds stock to Inventory · <b>barcode-ready</b></div>
+      <div class="soft" style="font-size:13px">Adds stock to Inventory · barcode-ready</div>
     </div>
-    <div class="row" style="gap:6px"><a class="btn" href="./pharmacy.html">DRUVHI MEDICALS</a><a class="btn" href="./index.html">Home</a></div>
+    <div class="row" style="gap:6px">
+      <a class="btn" href="./pharmacy.html">DRUVHI MEDICALS</a>
+      <a class="btn" href="./index.html">Home</a>
+    </div>
   </div>
-  <div class="banner"><img src="./assets/banner.png" alt="Clinic Banner"></div>
 
-  <!-- ▼▼▼ ADDED: Filter for Distributor Purchases vs Actual Sales ▼▼▼ -->
+  <!-- Period Filter / CSV (unchanged feature) -->
   <div class="card" style="background:#EAF6FF">
     <h3>Filter Report</h3>
     <div class="row" style="align-items:end">
@@ -69,220 +80,476 @@ a{color:inherit;text-decoration:none}
           <option value="sales">Actual Sales</option>
         </select>
       </div>
-      <div style="flex:0 0 180px">
-        <label>From</label>
-        <input id="fFrom" class="input" type="date">
-      </div>
-      <div style="flex:0 0 180px">
-        <label>To</label>
-        <input id="fTo" class="input" type="date">
-      </div>
-      <div style="flex:0 0 160px">
-        <button class="btn primary" onclick="showFilterReport()">Show Report</button>
-      </div>
-      <div style="flex:0 0 160px">
-        <button class="btn" onclick="exportFilterCSV()">Export CSV</button>
-      </div>
+      <div style="flex:0 0 180px"><label>From</label><input id="fFrom" class="input" type="date"></div>
+      <div style="flex:0 0 180px"><label>To</label><input id="fTo" class="input" type="date"></div>
+      <div style="flex:0 0 160px"><button class="btn primary" onclick="showFilterReport()">Show Report</button></div>
+      <div style="flex:0 0 160px"><button class="btn" onclick="exportFilterCSV()">Export CSV</button></div>
     </div>
     <table class="table" id="filterResult" style="margin-top:10px">
       <thead><tr><th>#</th><th>Date</th><th>ID/Invoice</th><th>Total</th></tr></thead>
       <tbody></tbody>
-      <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700">Total</td><td id="fTotal">₹0.00</td></tr></tfoot>
+      <tfoot><tr><td colspan="3" class="total">Total</td><td id="fTotal">₹0.00</td></tr></tfoot>
     </table>
   </div>
-  <!-- ▲▲▲ /ADDED ▼ nothing else below changed ▲▲▲ -->
 
+  <!-- Distributor + Buyer blocks (used in print) -->
   <div class="card" style="background:var(--mint)">
+    <h3>Invoice Parties</h3>
     <div class="row">
-      <div style="flex:1"><label>Distributor</label><input id="vendor" class="input" placeholder="SRI VENKATASAI AGENCIES"></div>
-      <div style="flex:1"><label>Invoice No</label><input id="inv" class="input"></div>
-      <div style="flex:0 0 180px"><label>Date</label><input id="pdate" class="input" type="date"></div>
-      <div style="flex:0 0 220px;align-self:end"><button class="btn primary" onclick="printBill()">🖨️ Print GST Invoice</button></div>
+      <div style="flex:1;min-width:260px">
+        <label>Supplier / Distributor</label>
+        <input id="vendor" class="input" placeholder="Rohini Medical Agencies">
+        <div class="row">
+          <input id="vendorAddr" class="input" placeholder="Supplier address" style="flex:1">
+          <input id="vendorPhone" class="input" placeholder="Phone" style="flex:0 0 160px">
+        </div>
+        <div class="row">
+          <input id="vendorGST" class="input" placeholder="GSTIN" style="flex:1">
+          <input id="vendorDL" class="input" placeholder="DL No(s)" style="flex:1">
+        </div>
+        <div class="row">
+          <input id="bankName" class="input" placeholder="Bank Name" style="flex:1">
+          <input id="bankAcc" class="input" placeholder="A/C No" style="flex:1">
+          <input id="bankIFSC" class="input" placeholder="IFSC" style="flex:1">
+        </div>
+        <div class="row">
+          <input id="upi" class="input" placeholder="UPI ID (optional)" style="flex:1">
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:260px">
+        <label>Buyer (Your Clinic)</label>
+        <input id="buyerName" class="input" placeholder="Druvhi Medicals">
+        <input id="buyerAddr" class="input" placeholder="Clinic address">
+        <div class="row">
+          <input id="buyerGST" class="input" placeholder="Buyer GSTIN" style="flex:1">
+          <input id="buyerState" class="input" placeholder="State" style="flex:1">
+          <input id="buyerCode" class="input" placeholder="State Code" style="flex:1">
+        </div>
+        <div class="row">
+          <input id="inv" class="input" placeholder="Supplier Invoice No" style="flex:1">
+          <input id="pdate" class="input" type="date" style="flex:0 0 160px">
+          <select id="invType" class="input" style="flex:0 0 140px">
+            <option value="CREDIT">CREDIT</option>
+            <option value="CASH">CASH</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="flex:0 0 220px;align-self:end">
+        <button class="btn primary" onclick="printBill()">🖨️ Print GST Invoice</button>
+      </div>
     </div>
   </div>
 
+  <!-- Add Item -->
   <div class="card" style="background:var(--lav)">
     <h3>Add Product to Purchase</h3>
     <div class="row">
       <div style="flex:1"><input id="pname" class="input" placeholder="Product Name"></div>
+      <div style="flex:0 0 120px"><input id="pmfr" class="input" placeholder="MFR / Company"></div>
       <div style="flex:0 0 90px"><input id="ppack" class="input" placeholder="Pack"></div>
-      <div style="flex:0 0 100px"><input id="pbatch" class="input" placeholder="Batch"></div>
-      <div style="flex:0 0 100px"><input id="pexp" class="input" placeholder="MM/YY"></div>
-      <div style="flex:0 0 80px"><input id="phsn" class="input" placeholder="HSN" value="30049099"></div>
-      <div style="flex:0 0 90px"><input id="pgst" class="input" placeholder="GST%" type="number" value="12"></div>
+      <div style="flex:0 0 90px"><input id="pbatch" class="input" placeholder="Batch"></div>
+      <div style="flex:0 0 90px"><input id="pexp" class="input" placeholder="MM/YY"></div>
+      <div style="flex:0 0 90px"><input id="phsn" class="input" placeholder="HSN" value="30049099"></div>
+      <div style="flex:0 0 70px"><input id="pgst" class="input" placeholder="GST%" type="number" value="12"></div>
       <div style="flex:0 0 80px"><input id="pmrp" class="input" placeholder="MRP" type="number"></div>
       <div style="flex:0 0 80px"><input id="prate" class="input" placeholder="Rate" type="number"></div>
-      <div style="flex:0 0 80px"><input id="pqty" class="input" placeholder="Qty" type="number"></div>
-      <div style="flex:0 0 200px;align-self:end" class="row">
+      <div style="flex:0 0 70px"><input id="pqty" class="input" placeholder="Qty" type="number"></div>
+      <div style="flex:0 0 70px"><input id="pfree" class="input" placeholder="Free" type="number" value="0"></div>
+      <div style="flex:0 0 80px"><input id="pdisc" class="input" placeholder="Disc %" type="number" value="0"></div>
+      <div style="flex:0 0 220px;align-self:end" class="row">
         <button class="btn primary" onclick="addRow()">Add</button>
-        <!-- scanner button works across app -->
         <button class="btn" id="scanPurch" data-scan data-scan-target="#pname">Scan</button>
       </div>
     </div>
   </div>
 
-  <div class="card" style="background:var(--peach)">
+  <!-- Items Table -->
+  <div class="card" style="background:var(--peach);overflow:auto">
     <table class="table" id="ptable">
-      <thead><tr><th>#</th><th>Product</th><th>Pack</th><th>Batch</th><th>EXP</th><th>HSN</th><th>GST%</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product</th>
+          <th>MFR</th>
+          <th>HSN</th>
+          <th>Pack</th>
+          <th>Batch</th>
+          <th>EXP</th>
+          <th class="right">Qty</th>
+          <th class="right">Free</th>
+          <th class="right">Rate</th>
+          <th class="right">Disc %</th>
+          <th class="right">Disc Amt</th>
+          <th class="right">Taxable</th>
+          <th class="right">GST%</th>
+          <th class="right">CGST</th>
+          <th class="right">SGST</th>
+          <th class="right">Net</th>
+        </tr>
+      </thead>
       <tbody></tbody>
-      <tfoot><tr><td colspan="9" class="total">Grand Total</td><td id="gtotal">0.00</td></tr></tfoot>
+      <tfoot>
+        <tr><td colspan="16" class="total">Gross Amount</td><td id="gtotal">0.00</td></tr>
+      </tfoot>
     </table>
-    <div class="row" style="justify-content:flex-end;margin-top:8px;gap:8px"><button class="btn" onclick="clearAll()">Clear</button></div>
+
+    <div class="row" style="margin-top:8px;gap:8px;justify-content:space-between">
+      <div class="box" style="flex:1">
+        <h4 style="margin:4px 0">GST Summary (by slab)</h4>
+        <table class="table" id="gstTable">
+          <thead><tr><th>Rate</th><th class="right">Taxable</th><th class="right">CGST</th><th class="right">SGST</th><th class="right">Total GST</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="totals-grid" style="flex:1;max-width:520px">
+        <div class="box"><div class="soft">Total Taxable</div><div id="totTaxable" style="font-weight:700">0.00</div></div>
+        <div class="box"><div class="soft">Total CGST</div><div id="totCGST" style="font-weight:700">0.00</div></div>
+        <div class="box"><div class="soft">Total SGST</div><div id="totSGST" style="font-weight:700">0.00</div></div>
+        <div class="box"><div class="soft">Round Off</div><input id="roundOff" class="input" type="number" value="0" oninput="render()"></div>
+        <div class="box" style="grid-column:1/-1">
+          <div class="soft">Grand Total</div>
+          <div id="grandTotal" style="font-weight:900;font-size:18px">0.00</div>
+          <div class="soft" id="grandWords" style="font-size:12px;margin-top:2px"></div>
+        </div>
+      </div>
+      <div class="row" style="gap:8px;align-items:end">
+        <button class="btn" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
   </div>
+
   <div class="footer">© 2025 <strong>Powered by Onestop AI Services</strong> · All Rights Reserved</div>
 </div>
+
 <div id="printArea"></div>
 
 <script>
+/* ===== DATA ===== */
 let STOCK=[], PURCH=[];
-function loadStock(){ try{STOCK=JSON.parse(localStorage.getItem('pharma_stock_json')||'[]')}catch{STOCK=[]} }
+function loadStock(){ try{STOCK=JSON.parse(localStorage.getItem('pharma_stock_json')||'[]')||[]}catch{STOCK=[]} }
 loadStock();
 
+/* ===== HELPERS ===== */
+const q =(s)=>document.querySelector(s);
+const v =(id)=>document.getElementById(id).value;
+const s =(id,val)=>{document.getElementById(id).value=val};
+const eqi=(a,b)=>String(a||'').toLowerCase()===String(b||'').toLowerCase();
+const money=(n)=> (Number(n)||0).toFixed(2);
+function toWordsIN(n){
+  n=Math.round(Number(n)||0);
+  if(n===0) return 'Zero rupees only';
+  const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function s100(num){ if(num<20) return a[num]; const tens=b[Math.floor(num/10)]+' '+a[num%10]; return tens.trim(); }
+  let words='', crore=Math.floor(n/1e7); n%=1e7;
+  let lakh=Math.floor(n/1e5); n%=1e5;
+  let thousand=Math.floor(n/1e3); n%=1e3;
+  let hundred=Math.floor(n/100); n%=100;
+  if(crore) words+=s100(crore)+' Crore ';
+  if(lakh) words+=s100(lakh)+' Lakh ';
+  if(thousand) words+=s100(thousand)+' Thousand ';
+  if(hundred) words+=a[hundred]+' Hundred ';
+  if(n) words+=(words?'and ':'')+s100(n)+' ';
+  return (words+'rupees only').replace(/\s+/g,' ').trim();
+}
+
+/* ===== ADD / UPDATE STOCK ===== */
 function addRow(){
-  const r={ name:v('pname'),pack:v('ppack'),batch:v('pbatch'),exp:v('pexp'),
-    hsn:v('phsn'),gst:+v('pgst')||0,rate:+v('prate')||0,qty:+v('pqty')||0,mrp:+v('pmrp')||0 };
+  const r={
+    name: v('pname').trim(),
+    mfr:  v('pmfr').trim(),
+    pack: v('ppack').trim(),
+    batch:v('pbatch').trim(),
+    exp:  v('pexp').trim(),
+    hsn:  v('phsn').trim(),
+    gst: +v('pgst')||0,
+    mrp: +v('pmrp')||0,
+    rate:+v('prate')||0,
+    qty: +v('pqty')||0,
+    free:+v('pfree')||0,
+    discPct:+v('pdisc')||0
+  };
   if(!r.name||!r.batch||!r.exp||!r.qty){ alert('Missing fields'); return; }
-  PURCH.push(r); updateStock(r); render();
-  ['pname','ppack','pbatch','pexp','phsn','pgst','pmrp','prate','pqty'].forEach(id=>s(id,''));
-}
 
-function fillFromBarcode(code){
-  let it = STOCK.find(s=> (s.barcode||`${s.name}|${s.batch}`)===code );
-  if(!it && code.includes('|')){
-    const [nm,bt]=code.split('|');
-    it = STOCK.find(s=>eqi(s.name,nm) && s.batch===bt);
-  }
-  if(it){
-    s('pname',it.name); s('ppack',it.pack||''); s('pbatch',it.batch); s('pexp',it.exp);
-    s('pmrp',it.mrp); s('prate',it.rate||it.mrp); s('pqty','1');
-  }else{
-    s('pname',code); s('pqty','1');
-  }
-}
+  // derived
+  r.lineBase = r.rate * r.qty;
+  r.discAmt  = r.lineBase * (r.discPct/100);
+  r.taxable  = r.lineBase - r.discAmt;
+  r.cgstAmt  = r.taxable * (r.gst/2)/100;
+  r.sgstAmt  = r.taxable * (r.gst/2)/100;
+  r.netLine  = r.taxable + r.cgstAmt + r.sgstAmt;
 
+  PURCH.push(r);
+  updateStock(r);
+  render();
+
+  ['pname','pmfr','ppack','pbatch','pexp','phsn','pgst','pmrp','prate','pqty','pfree','pdisc'].forEach(id=>s(id,''));
+}
 function updateStock(it){
+  // add purchased qty + free to stock; carry info
+  const addQty = (it.qty||0) + (it.free||0);
   const i=STOCK.findIndex(s=>eqi(s.name,it.name) && s.batch===it.batch);
-  if(i>=0){ STOCK[i].qty+=it.qty; STOCK[i].mrp=it.mrp; STOCK[i].rate=it.rate; STOCK[i].pack=it.pack; STOCK[i].exp=it.exp; }
-  else STOCK.push({name:it.name,pack:it.pack,batch:it.batch,exp:it.exp,qty:it.qty,mrp:it.mrp,rate:it.rate, barcode:`${it.name}|${it.batch}`});
+  const rec = {
+    name:it.name, mfr:it.mfr, pack:it.pack, batch:it.batch, exp:it.exp,
+    qty:addQty, mrp:it.mrp, rate:it.rate, hsn:it.hsn, gst:it.gst,
+    barcode:`${it.name}|${it.batch}`
+  };
+  if(i>=0){
+    STOCK[i].qty = (STOCK[i].qty||0) + addQty;
+    Object.assign(STOCK[i], {mrp:it.mrp, rate:it.rate, pack:it.pack, exp:it.exp, mfr:it.mfr, hsn:it.hsn, gst:it.gst});
+  }else{
+    STOCK.push(rec);
+  }
   persistStock();
 }
+function persistStock(){ localStorage.setItem('pharma_stock_json',JSON.stringify(STOCK)); }
+
+/* ===== RENDER TABLE & TOTALS ===== */
 function render(){
-  const tb=q('#ptable tbody'); tb.innerHTML='';
-  let t=0;
-  PURCH.forEach((r,i)=>{ const amt=r.qty*r.rate; t+=amt;
-    tb.innerHTML+=`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.pack}</td><td>${r.batch}</td><td>${r.exp}</td><td>${r.hsn}</td><td>${r.gst}</td><td>${r.rate}</td><td>${r.qty}</td><td>${amt.toFixed(2)}</td></tr>`;
+  const tb = q('#ptable tbody'); tb.innerHTML='';
+  let gross=0, totTaxable=0, totCGST=0, totSGST=0;
+  const slabs = {}; // {rate: {taxable,cgst,sgst}}
+
+  PURCH.forEach((r,i)=>{
+    gross += r.netLine;
+    totTaxable += r.taxable;
+    totCGST += r.cgstAmt;
+    totSGST += r.sgstAmt;
+
+    const slab = slabs[r.gst] || {taxable:0,cgst:0,sgst:0};
+    slab.taxable += r.taxable; slab.cgst += r.cgstAmt; slab.sgst += r.sgstAmt;
+    slabs[r.gst]=slab;
+
+    tb.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${i+1}</td>
+        <td>${r.name}</td>
+        <td>${r.mfr||''}</td>
+        <td>${r.hsn||''}</td>
+        <td>${r.pack||''}</td>
+        <td>${r.batch||''}</td>
+        <td>${r.exp||''}</td>
+        <td class="right">${r.qty}</td>
+        <td class="right">${r.free||0}</td>
+        <td class="right">${money(r.rate)}</td>
+        <td class="right">${money(r.discPct)}</td>
+        <td class="right">${money(r.discAmt)}</td>
+        <td class="right">${money(r.taxable)}</td>
+        <td class="right">${money(r.gst)}</td>
+        <td class="right">${money(r.cgstAmt)}</td>
+        <td class="right">${money(r.sgstAmt)}</td>
+        <td class="right">${money(r.netLine)}</td>
+      </tr>`);
   });
-  q('#gtotal').textContent=t.toFixed(2);
+
+  // Pad to 15 rows for a neat print page
+  const blanks = Math.max(0, 15 - PURCH.length);
+  for(let i=0;i<blanks;i++){
+    tb.insertAdjacentHTML('beforeend', `
+      <tr class="blank-row">
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>`);
+  }
+
+  // GST slab table
+  const gtb=q('#gstTable tbody'); gtb.innerHTML='';
+  Object.keys(slabs).sort((a,b)=>+a-+b).forEach(rate=>{
+    const s=slabs[rate]; const totalGST=(s.cgst+s.sgst);
+    gtb.insertAdjacentHTML('beforeend', `<tr>
+      <td>${rate}%</td>
+      <td class="right">${money(s.taxable)}</td>
+      <td class="right">${money(s.cgst)}</td>
+      <td class="right">${money(s.sgst)}</td>
+      <td class="right">${money(totalGST)}</td>
+    </tr>`);
+  });
+
+  // Totals
+  const round = Number(v('roundOff'))||0;
+  const grand = totTaxable + totCGST + totSGST + round;
+  q('#gtotal').textContent = money(gross);
+  q('#totTaxable').textContent = money(totTaxable);
+  q('#totCGST').textContent = money(totCGST);
+  q('#totSGST').textContent = money(totSGST);
+  q('#grandTotal').textContent = money(grand);
+  q('#grandWords').textContent = toWordsIN(grand);
 }
+
+/* ===== PRINT A4 ===== */
 function printBill(){
-  if(!PURCH.length)return;
-  const vndr=v('vendor')||'SRI VENKATASAI AGENCIES',
-        inv=v('inv')||('INV'+Date.now().toString().slice(-6)),
-        date=v('pdate')||new Date().toISOString().slice(0,10);
-  const total=+q('#gtotal').textContent||0,
-        gstSplit={5:0,12:0,18:0,28:0};
-  PURCH.forEach(r=>gstSplit[r.gst]=(gstSplit[r.gst]||0)+(r.qty*r.rate));
-  const html=`<div class="a4 bill"><h2>${vndr}</h2><div>Pharmaceutical Distributor</div>
-  <div><b>Invoice No:</b> ${inv} &nbsp; <b>Date:</b> ${date}</div><hr>
-  <table><thead><tr><th>#</th><th>Product</th><th>Pack</th><th>Batch</th><th>Exp</th><th>HSN</th><th>GST%</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
-  ${PURCH.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.pack}</td><td>${r.batch}</td><td>${r.exp}</td><td>${r.hsn}</td><td>${r.gst}</td><td>${r.rate.toFixed(2)}</td><td>${r.qty}</td><td>${(r.qty*r.rate).toFixed(2)}</td></tr>`).join('')}
-  </tbody></table>
-  <div style="text-align:right;margin-top:6px"><b>Total:</b> ${total.toFixed(2)}</div>
-  <div><b>GST Breakup:</b> 5% ₹${gstSplit[5].toFixed(2)} &nbsp; 12% ₹${gstSplit[12].toFixed(2)} &nbsp; 18% ₹${gstSplit[18].toFixed(2)} &nbsp; 28% ₹${gstSplit[28].toFixed(2)}</div>
-  <hr><div style="text-align:center;font-size:12px">Bank: UNION BANK OF INDIA · A/C 191215140000006 · IFSC: UBIN0819123</div>
-  <div style="text-align:center;font-size:11px">Powered by Onestop AI Services · © 2025 · All Rights Reserved</div></div>`;
+  if(!PURCH.length) return alert('No items to print.');
+  // Recompute to be safe
+  render();
+
+  const vendor=v('vendor')||'Supplier';
+  const inv=v('inv')||('INV'+Date.now().toString().slice(-6));
+  const date=v('pdate')||new Date().toISOString().slice(0,10);
+  const vAddr=v('vendorAddr'), vGST=v('vendorGST'), vDL=v('vendorDL'), vPh=v('vendorPhone');
+  const bName=v('buyerName')||'Buyer', bAddr=v('buyerAddr'), bGST=v('buyerGST'), bState=v('buyerState'), bCode=v('buyerCode');
+  const invType=v('invType')||'CREDIT';
+  const bank={name:v('bankName'), acc:v('bankAcc'), ifsc:v('bankIFSC'), upi:v('upi')};
+
+  // Build items rows html
+  const rows = PURCH.map((r,i)=>`<tr>
+    <td>${i+1}</td><td>${r.name}</td><td>${r.mfr||''}</td><td>${r.hsn||''}</td><td>${r.pack||''}</td>
+    <td>${r.batch||''}</td><td>${r.exp||''}</td>
+    <td class="right">${r.qty}</td><td class="right">${r.free||0}</td>
+    <td class="right">${money(r.rate)}</td>
+    <td class="right">${money(r.discPct)}</td>
+    <td class="right">${money(r.discAmt)}</td>
+    <td class="right">${money(r.taxable)}</td>
+    <td class="right">${money(r.gst)}</td>
+    <td class="right">${money(r.cgstAmt)}</td>
+    <td class="right">${money(r.sgstAmt)}</td>
+    <td class="right">${money(r.netLine)}</td>
+  </tr>`).join('');
+
+  // slab summary table
+  const gtb = q('#gstTable tbody').innerHTML;
+
+  const html = `
+  <div class="a4 bill">
+    <div class="grid">
+      <div>
+        <h2>${vendor}</h2>
+        <div>${vAddr||''}</div>
+        <div>GSTIN: ${vGST||'-'} &nbsp; DL: ${vDL||'-'}</div>
+        <div>Phone: ${vPh||'-'}</div>
+      </div>
+      <div class="right">
+        <div><b>Invoice:</b> ${inv}</div>
+        <div><b>Date:</b> ${date}</div>
+        <div><b>Type:</b> ${invType}</div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:6px">
+      <div>
+        <b>Bill To:</b> ${bName}<br>${bAddr||''}<br>GSTIN: ${bGST||'-'}
+      </div>
+      <div class="right">
+        State: ${bState||''} &nbsp; State Code: ${bCode||''}
+      </div>
+    </div>
+
+    <table style="margin-top:6px">
+      <thead>
+        <tr>
+          <th>#</th><th>Product</th><th>MFR</th><th>HSN</th><th>Pack</th><th>Batch</th><th>EXP</th>
+          <th>Qty</th><th>Free</th><th>Rate</th><th>Disc %</th><th>Disc Amt</th>
+          <th>Taxable</th><th>GST%</th><th>CGST</th><th>SGST</th><th>Net</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="grid" style="margin-top:6px">
+      <div>
+        <table>
+          <thead><tr><th>Rate</th><th>Taxable</th><th>CGST</th><th>SGST</th><th>Total GST</th></tr></thead>
+          <tbody>${gtb}</tbody>
+        </table>
+      </div>
+      <div>
+        <table>
+          <tbody>
+            <tr><td><b>Total Taxable</b></td><td class="right">${q('#totTaxable').textContent}</td></tr>
+            <tr><td><b>Total CGST</b></td><td class="right">${q('#totCGST').textContent}</td></tr>
+            <tr><td><b>Total SGST</b></td><td class="right">${q('#totSGST').textContent}</td></tr>
+            <tr><td><b>Round Off</b></td><td class="right">${money(v('roundOff'))}</td></tr>
+            <tr><td><b>Grand Total</b></td><td class="right"><b>${q('#grandTotal').textContent}</b></td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:4px"><i>Amount in words:</i> ${q('#grandWords').textContent}</div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:8px">
+      <div>
+        <b>Bank Details</b><br>
+        ${bank.name||'-'} &nbsp; A/C: ${bank.acc||'-'} &nbsp; IFSC: ${bank.ifsc||'-'}<br>
+        UPI: ${bank.upi||'-'}
+      </div>
+      <div class="right">
+        For <b>${vendor}</b><br><br><br>Authorized Signatory
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:6px">
+      <div>Receiver Signature: ____________________________</div>
+      <div class="right">E. & O. E.</div>
+    </div>
+  </div>`;
+
   q('#printArea').innerHTML=html;
   window.print();
-  savePurchase({vendor:vndr,inv,date,total,items:PURCH});
+
+  // Save purchase & reset
+  const total = Number(q('#grandTotal').textContent)||0;
+  savePurchase({vendor, inv, date, total, items:PURCH});
   clearAll();
 }
+
+/* ===== SAVE / FILTER ===== */
 function savePurchase(bill){
-  let arr=[];
-  try{arr=JSON.parse(localStorage.getItem('pharma_purchases_json')||'[]')}catch{}
+  let arr=[]; try{arr=JSON.parse(localStorage.getItem('pharma_purchases_json')||'[]')}catch{}
   arr.push(bill);
   localStorage.setItem('pharma_purchases_json',JSON.stringify(arr));
   const month=new Date().toISOString().slice(0,7);
-  const count=arr.filter(b=>b.date.startsWith(month)).length;
+  const count=arr.filter(b=>String(b.date||'').startsWith(month)).length;
   localStorage.setItem('pharma_purchases_month',count);
   window.dispatchEvent(new StorageEvent('storage',{key:'pharma_purchases_month'}));
 }
-function persistStock(){ localStorage.setItem('pharma_stock_json',JSON.stringify(STOCK)); }
-function clearAll(){ PURCH=[]; render(); }
-function v(id){return document.getElementById(id).value}
-function s(id,val){document.getElementById(id).value=val}
-function q(sel){return document.querySelector(sel)}
-function eqi(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase();}
-
-/* ===== ADDED: Filter logic (reads existing localStorage data) ===== */
 let FILTER_LAST = { type:'', rows:[], from:'', to:'' };
-
 function showFilterReport(){
   const type = document.getElementById('fType').value;
   const fromStr = document.getElementById('fFrom').value || '1970-01-01';
   const toStr   = document.getElementById('fTo').value   || new Date().toISOString().slice(0,10);
   const from = new Date(fromStr);
   const to   = new Date(toStr); to.setHours(23,59,59,999);
-
   let arr=[];
-  if(type==='purchases'){
-    try{arr=JSON.parse(localStorage.getItem('pharma_purchases_json')||'[]')}catch{}
-  } else {
-    try{arr=JSON.parse(localStorage.getItem('pharma_sales_json')||'[]')}catch{}
-  }
-
-  const rows=arr.filter(r=>{
-    const d=new Date(r.date||r.ts||'');
-    return d>=from && d<=to;
-  });
+  if(type==='purchases'){ try{arr=JSON.parse(localStorage.getItem('pharma_purchases_json')||'[]')}catch{} }
+  else { try{arr=JSON.parse(localStorage.getItem('pharma_sales_json')||'[]')}catch{} }
+  const rows=arr.filter(r=>{ const d=new Date(r.date||r.ts||''); return d>=from && d<=to; });
 
   const tb=document.querySelector('#filterResult tbody'); tb.innerHTML='';
   let total=0;
   rows.forEach((r,i)=>{
     const dt=(r.date? r.date.slice(0,10): new Date(r.ts).toISOString().slice(0,10));
-    const id=r.inv||r.id||'-';
-    const val=Number(r.total||r.amount||0);
-    total+=val;
+    const id=r.inv||r.id||'-'; const val=Number(r.total||r.amount||0); total+=val;
     tb.insertAdjacentHTML('beforeend',`<tr><td>${i+1}</td><td>${dt}</td><td>${id}</td><td>₹${val.toFixed(2)}</td></tr>`);
   });
   document.getElementById('fTotal').textContent='₹'+total.toFixed(2);
-
-  FILTER_LAST = {
-    type, from: fromStr, to: toStr,
-    rows: rows.map(r=>({
-      date: (r.date? r.date.slice(0,10): new Date(r.ts).toISOString().slice(0,10)),
-      id: r.inv||r.id||'-',
-      total: Number(r.total||r.amount||0)
-    }))
-  };
+  FILTER_LAST = { type, from: fromStr, to: toStr, rows: rows.map(r=>({date:(r.date? r.date.slice(0,10): new Date(r.ts).toISOString().slice(0,10)), id:r.inv||r.id||'-', total:Number(r.total||r.amount||0)})) };
 }
-
 function exportFilterCSV(){
-  if(!FILTER_LAST.rows.length){
-    alert('Run "Show Report" first.');
-    return;
-  }
+  if(!FILTER_LAST.rows.length){ alert('Run "Show Report" first.'); return; }
   const lines = ['Date,ID/Invoice,Total'];
-  FILTER_LAST.rows.forEach(r=>{
-    lines.push(`${r.date},${String(r.id).replace(/,/g,' ')},${r.total.toFixed(2)}`);
-  });
+  FILTER_LAST.rows.forEach(r=>{ lines.push(`${r.date},${String(r.id).replace(/,/g,' ')},${r.total.toFixed(2)}`); });
   const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
   const safeType = FILTER_LAST.type==='purchases' ? 'purchases' : 'sales';
   const range = `${FILTER_LAST.from}_to_${FILTER_LAST.to}`;
   a.href = URL.createObjectURL(blob);
   a.download = `${safeType}_report_${range}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  URL.revokeObjectURL(a.href);
-  a.remove();
+  document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
 }
-/* ===== /ADDED ===== */
+
+/* ===== CLEAR ===== */
+function clearAll(){ PURCH=[]; render(); }
+
+/* ===== INIT ===== */
+render();
 </script>
 
 <!-- Engines + Wiring -->
 <script src="/scripts/qrcode.min.js?v=1.1"></script>
 <script src="/scripts/barcode.js?v=8.4.6"></script>
-<script src="/scripts/app-wiring.js?v=1.1"></script>
 <script src="/scripts/seed-and-diagnostics.js?v=1.3"></script>
+<script src="/scripts/scanner.js?v=1.0"></script>
+<script src="/scripts/shortcuts.js?v=1.0"></script>
 </body>
 </html>

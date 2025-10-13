@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>One-click minimal setup</title>
+  <style>
+    body{font:14px/1.5 sans-serif;padding:20px}
+    #btn {padding:10px 18px; font-size:16px;}
+    pre {background:#f0f0f0;padding:10px; border-radius:6px; white-space:pre-wrap;}
+  </style>
+</head>
+<body>
+  <h2>One-Click Minimal Setup</h2>
+  <div>
+    <label>Base URL: <input id="base" value="http://127.0.0.1:5984" style="width:260px"></label><br>
+    <label>User: <input id="user" value="admin" style="width:100px"></label>
+    <label>Pass: <input id="pass" type="password" value="" style="width:140px"></label><br>
+    <label>Prefix: <input id="prefix" value="clinic" style="width:120px"></label><br><br>
+    <button id="btn">Run Setup</button>
+  </div>
+  <div>
+    <pre id="log">Log...</pre>
+  </div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function log(m) {
+      logEl.textContent += m + "\n";
+    }
+    document.getElementById('btn').onclick = async () => {
+      logEl.textContent = "";
+      log("Starting setup...");
+      const base = document.getElementById('base').value.trim();
+      const user = document.getElementById('user').value;
+      const pass = document.getElementById('pass').value;
+      const prefix = document.getElementById('prefix').value.trim() || "clinic";
+      if (!base) {
+        log("❌ Base URL is empty!");
+        return;
+      }
+      // ping /_up
+      try {
+        const upR = await fetch(base.replace(/\/$/,'') + "/_up");
+        log("/_up status: " + upR.status);
+        const j = await upR.json();
+        log("Response: " + JSON.stringify(j));
+      } catch (e) {
+        log("❌ /_up failed: " + e);
+        return;
+      }
+      // create one DB
+      const dbName = prefix + "-patients";
+      try {
+        const r = await fetch(base.replace(/\/$/,'') + "/" + encodeURIComponent(dbName), {
+          method: "PUT",
+          headers: {
+            "Authorization": "Basic " + btoa(user + ":" + pass),
+            "Content-Type": "application/json"
+          }
+        });
+        log("Create DB " + dbName + ": " + r.status);
+        const rr = await r.text();
+        log("Body: " + rr);
+      } catch (e) {
+        log("❌ Create failed: " + e);
+      }
+    };
+  </script>
+</body>
+</html>
